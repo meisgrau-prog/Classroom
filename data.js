@@ -13,8 +13,9 @@
    ============================================================ */
 
 const SITE = {
-  // Shown at the top of every page
-  className: "My Classroom",
+  // Shown on the welcome page and at the top of every page
+  welcome: "Welcome to My Class",
+  teacherName: "Rabbi Eisgrau",
 
   // ---------- TODAY'S CLASSWORK ----------
   classwork: {
@@ -50,5 +51,7 @@ const SITE = {
 
   // ---------- CONTACT ----------
   // Messages from the Contact page are emailed here.
-  contactEmail: "meisgrau@ykwaterbury.org"
+  contactEmail: "meisgrau@ykwaterbury.org",
+  // Phone number shown on the Contact page
+  phone: "848-210-6960"
 };

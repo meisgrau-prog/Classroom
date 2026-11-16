@@ -3,24 +3,25 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>News – My Classroom</title>
+  <title>News – Rabbi Eisgrau</title>
   <link rel="stylesheet" href="style.css">
   <script src="data.js"></script>
   <script src="common.js"></script>
 </head>
-<body style="--accent: var(--news)">
-  <header>
-    <a class="home" href="index.html">← Back to home</a>
-    <h1 data-class-name>My Classroom</h1>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html" data-teacher>Rabbi Eisgrau</a>
+    <a class="back" href="menu.html">← All sections</a>
   </header>
   <main>
-    <h2 class="page-title" style="margin-bottom:16px">📣 News</h2>
+    <h1 class="page-title">News</h1>
+    <hr class="rule">
     <div id="news"></div>
   </main>
   <script>
     const list = document.getElementById("news");
     if (!SITE.news || SITE.news.length === 0) {
-      list.innerHTML = '<div class="card empty">No news yet. Check back soon!</div>';
+      list.innerHTML = '<div class="card empty">No news yet. Please check back soon.</div>';
     } else {
       SITE.news.forEach(item => {
         const card = document.createElement("article");

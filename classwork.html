@@ -3,15 +3,15 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Today's Classwork – My Classroom</title>
+  <title>Today's Classwork – Rabbi Eisgrau</title>
   <link rel="stylesheet" href="style.css">
   <script src="data.js"></script>
   <script src="common.js"></script>
 </head>
-<body style="--accent: var(--classwork)">
-  <header>
-    <a class="home" href="index.html">← Back to home</a>
-    <h1 data-class-name>My Classroom</h1>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html" data-teacher>Rabbi Eisgrau</a>
+    <a class="back" href="menu.html">← All sections</a>
   </header>
   <main id="content"></main>
   <script>renderAssignment(SITE.classwork, document.getElementById("content"));</script>

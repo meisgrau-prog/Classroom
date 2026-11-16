@@ -3,42 +3,71 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Contact Me – My Classroom</title>
+  <title>Contact – Rabbi Eisgrau</title>
   <link rel="stylesheet" href="style.css">
   <script src="data.js"></script>
   <script src="common.js"></script>
 </head>
-<body style="--accent: var(--contact)">
-  <header>
-    <a class="home" href="index.html">← Back to home</a>
-    <h1 data-class-name>My Classroom</h1>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html" data-teacher>Rabbi Eisgrau</a>
+    <a class="back" href="menu.html">← All sections</a>
   </header>
   <main>
-    <div class="card">
-      <h2 class="page-title">✉️ Contact Me</h2>
-      <p class="date">Send me a message and I'll get back to you by email.</p>
+    <h1 class="page-title">Contact Me</h1>
+    <hr class="rule">
 
-      <form id="contact-form">
-        <label for="name">Your name</label>
-        <input id="name" name="name" required autocomplete="name">
-
-        <label for="email">Your email</label>
-        <input id="email" name="email" type="email" required autocomplete="email">
-
-        <label for="message">Message</label>
-        <textarea id="message" name="message" required></textarea>
-
-        <!-- Spam trap: real people leave this empty -->
-        <input type="text" name="_honey" style="display:none" tabindex="-1" autocomplete="off">
-
+    <div class="contact-grid">
+      <div class="card">
+        <h2 class="section-title">Phone</h2>
+        <p class="date" style="margin:0">Call or text</p>
+        <a class="phone-number" id="phone-link" href="#"></a>
         <div class="actions">
-          <button class="button" type="submit" id="send">Send message</button>
+          <a class="button" id="call-btn" href="#">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>
+            <span>Call</span>
+          </a>
+          <a class="button secondary" id="text-btn" href="#">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <span>Text</span>
+          </a>
         </div>
-        <p class="status" id="status" role="status"></p>
-      </form>
+      </div>
+
+      <div class="card">
+        <h2 class="section-title">Send a Message</h2>
+        <p class="date" style="margin:0">Your message will be emailed to me directly.</p>
+
+        <form id="contact-form">
+          <label for="name">Your name</label>
+          <input id="name" name="name" required autocomplete="name">
+
+          <label for="email">Your email</label>
+          <input id="email" name="email" type="email" required autocomplete="email">
+
+          <label for="message">Message</label>
+          <textarea id="message" name="message" required></textarea>
+
+          <!-- Spam trap: real people leave this empty -->
+          <input type="text" name="_honey" style="display:none" tabindex="-1" autocomplete="off">
+
+          <div class="actions">
+            <button class="button" type="submit" id="send">Send message</button>
+          </div>
+          <p class="status" id="status" role="status"></p>
+        </form>
+      </div>
     </div>
   </main>
   <script>
+    // Phone links
+    const digits = SITE.phone.replace(/[^0-9+]/g, "");
+    const phoneLink = document.getElementById("phone-link");
+    phoneLink.textContent = SITE.phone;
+    phoneLink.href = "tel:" + digits;
+    document.getElementById("call-btn").href = "tel:" + digits;
+    document.getElementById("text-btn").href = "sms:" + digits;
+
     // Messages are delivered by FormSubmit (formsubmit.co), a free service
     // that emails form submissions to SITE.contactEmail.
     const form = document.getElementById("contact-form");
@@ -53,7 +82,7 @@
       status.textContent = "";
 
       const data = Object.fromEntries(new FormData(form));
-      data._subject = "New message from " + SITE.className + " website";
+      data._subject = "New message from your class website";
       data._template = "table";
       data._replyto = data.email;
 
@@ -69,15 +98,15 @@
         }
         form.reset();
         status.className = "status ok";
-        status.textContent = "✅ Thank you! Your message was sent.";
+        status.textContent = "Thank you — your message was sent.";
       } catch (err) {
         status.className = "status err";
         status.innerHTML = "";
-        status.append("Sorry, the message could not be sent. You can email me directly at ");
+        status.append("Sorry, the message could not be sent. Please email ");
         const a = document.createElement("a");
         a.href = "mailto:" + SITE.contactEmail;
         a.textContent = SITE.contactEmail;
-        status.append(a, ".");
+        status.append(a, " or call " + SITE.phone + ".");
       } finally {
         send.disabled = false;
         send.textContent = "Send message";

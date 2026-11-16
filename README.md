@@ -1,11 +1,13 @@
 # Classroom Website
 
-A simple class website with four pages:
+A class website for Rabbi Eisgrau.
 
+- **Welcome page** (`index.html`) – "Welcome to My Class", the teacher's name, and a Get Started button
+- **Sections page** (`menu.html`) – large buttons for the pages below
 - **Today's Classwork** – preview and download today's classwork
 - **Today's Homework** – preview and download today's homework
 - **News** – class announcements
-- **Contact Me** – a form that emails the teacher
+- **Contact Me** – phone number (tap to call or text) and a form that emails the teacher
 
 ## How to update the site
 
@@ -20,6 +22,9 @@ Tip: if you upload a new file with the **same name** (`classwork.pdf` / `homewor
 
 ### Add news
 Copy one `{ date, title, text },` block in the `news` list, paste it at the top, and change the words.
+
+## Change the welcome text, name, or phone number
+In `data.js`, edit `welcome`, `teacherName`, or `phone`.
 
 ## Contact form (one-time setup)
 Messages are delivered by the free service FormSubmit (formsubmit.co).
