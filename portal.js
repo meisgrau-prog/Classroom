@@ -421,7 +421,7 @@ $("save-btn").addEventListener("click", async () => {
   } catch (e) {
     msg.className = "msg err";
     msg.textContent = (e.status === 403 || e.status === 404)
-      ? "Couldn't save: your key needs “Contents: Read and write” permission for the Classroom repository."
+      ? "Couldn't save: your GitHub key isn't allowed to make changes. Edit the key on GitHub: Repository access → Only select repositories → Classroom, and Permissions → Contents → Read and write. (GitHub said: " + e.message + ")"
       : e.status === 401
         ? "Your key has expired or is no longer valid. Sign out and sign in with a new key."
         : "Couldn't save: " + e.message + ". Please try again.";
