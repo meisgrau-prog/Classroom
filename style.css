@@ -471,3 +471,7 @@ details summary { cursor: pointer; font-weight: 600; color: var(--navy); }
 .topbar .top-actions { display: flex; gap: 16px; align-items: center; }
 .topbar button.back { background: none; border: 0; font: inherit; cursor: pointer; padding: 0; }
 .hidden { display: none !important; }
+.nohw-emoji { font-size: 1.3em; line-height: 1; display: inline-block; animation: nohw-bounce 1.6s ease-in-out infinite; }
+.nohw-emoji:last-child { animation-delay: .3s; }
+@keyframes nohw-bounce { 0%, 100% { transform: translateY(0) rotate(0); } 25% { transform: translateY(-5px) rotate(-8deg); } 50% { transform: translateY(0) rotate(0); } 75% { transform: translateY(-3px) rotate(8deg); } }
+@media (prefers-reduced-motion: reduce) { .nohw-emoji { animation: none; } }

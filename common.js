@@ -91,8 +91,9 @@ function noHomeworkBanner(content) {
   if (!content.noHomework || !content.noHomework.on) return null;
   const b = el("div", "nohw-banner");
   b.setAttribute("role", "status");
-  b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>';
+  b.appendChild(el("span", "nohw-emoji", "🎉"));
   b.appendChild(el("span", null, content.noHomework.message || "No homework tonight!"));
+  b.appendChild(el("span", "nohw-emoji", "🥳"));
   return b;
 }
 
