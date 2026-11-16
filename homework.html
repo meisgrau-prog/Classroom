@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Today's Homework – My Classroom</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="data.js"></script>
+  <script src="common.js"></script>
+</head>
+<body style="--accent: var(--homework)">
+  <header>
+    <a class="home" href="index.html">← Back to home</a>
+    <h1 data-class-name>My Classroom</h1>
+  </header>
+  <main id="content"></main>
+  <script>renderAssignment(SITE.homework, document.getElementById("content"));</script>
+</body>
+</html>

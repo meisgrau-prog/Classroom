@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>News – My Classroom</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="data.js"></script>
+  <script src="common.js"></script>
+</head>
+<body style="--accent: var(--news)">
+  <header>
+    <a class="home" href="index.html">← Back to home</a>
+    <h1 data-class-name>My Classroom</h1>
+  </header>
+  <main>
+    <h2 class="page-title" style="margin-bottom:16px">📣 News</h2>
+    <div id="news"></div>
+  </main>
+  <script>
+    const list = document.getElementById("news");
+    if (!SITE.news || SITE.news.length === 0) {
+      list.innerHTML = '<div class="card empty">No news yet. Check back soon!</div>';
+    } else {
+      SITE.news.forEach(item => {
+        const card = document.createElement("article");
+        card.className = "card news-item";
+        const h = document.createElement("h2");
+        h.textContent = item.title;
+        const d = document.createElement("p");
+        d.className = "date";
+        d.textContent = item.date || "";
+        const p = document.createElement("p");
+        p.textContent = item.text;
+        card.append(h, d, p);
+        list.appendChild(card);
+      });
+    }
+  </script>
+</body>
+</html>
