@@ -1,0 +1,39 @@
+{
+  "noHomework": {
+    "on": false,
+    "message": "No homework tonight!"
+  },
+  "classwork": {
+    "title": "Today's Classwork",
+    "date": "2026-11-16",
+    "notes": "Complete both sections. Show your work!",
+    "files": [
+      { "name": "classwork.pdf", "path": "classwork.pdf" }
+    ]
+  },
+  "homework": {
+    "title": "Today's Homework",
+    "date": "2026-11-16",
+    "due": "2026-11-17",
+    "notes": "Bring it to class tomorrow.",
+    "files": [
+      { "name": "homework.pdf", "path": "homework.pdf" }
+    ]
+  },
+  "news": [
+    {
+      "id": "n1",
+      "title": "Welcome to our class website!",
+      "date": "2026-11-16",
+      "text": "Check here every day for classwork, homework, and news.",
+      "files": []
+    },
+    {
+      "id": "n2",
+      "title": "Field trip permission slips",
+      "date": "2026-11-16",
+      "text": "Please return signed permission slips by Friday.",
+      "files": []
+    }
+  ]
+}

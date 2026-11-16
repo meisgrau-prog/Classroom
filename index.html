@@ -8,14 +8,78 @@
   <script src="data.js"></script>
   <script src="common.js"></script>
 </head>
-<body>
+<body class="landing-body">
   <section class="landing">
-    <div>
+    <div class="landing-inner">
+
+      <!-- Classroom illustration: books & apple, globe, pencil cup, open book -->
+      <svg class="classroom-art" viewBox="0 0 600 230" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <!-- shelf -->
+        <path d="M20 204h560" stroke="#c9a96a" stroke-width="3"/>
+        <path d="M40 204v10M560 204v10" stroke="#c9a96a" stroke-width="3"/>
+
+        <!-- stack of books -->
+        <g stroke="#e8d7b0" stroke-width="2">
+          <rect x="60" y="172" width="140" height="32" rx="3" fill="#7a2335"/>
+          <path d="M72 172v32M188 172v32" />
+          <path d="M84 188h92" stroke="#c9a96a"/>
+          <rect x="72" y="142" width="118" height="30" rx="3" fill="#1f4e79"/>
+          <path d="M84 142v30M178 142v30"/>
+          <path d="M96 157h70" stroke="#c9a96a"/>
+          <rect x="64" y="114" width="128" height="28" rx="3" fill="#2f5d3a"/>
+          <path d="M76 114v28M180 114v28"/>
+          <path d="M90 128h76" stroke="#c9a96a"/>
+        </g>
+        <!-- apple -->
+        <g stroke="#e8d7b0" stroke-width="2">
+          <path d="M128 78c-8-6-26-4-26 14 0 14 10 22 16 22 4 0 6-2 10-2s6 2 10 2c6 0 16-8 16-22 0-18-18-20-26-14z" fill="#a8323e"/>
+          <path d="M128 78c0-6 1-10 4-14"/>
+          <path d="M132 70c6-6 14-6 18-4-4 6-12 8-18 4z" fill="#3f7a4a"/>
+        </g>
+
+        <!-- globe -->
+        <g stroke="#e8d7b0" stroke-width="2">
+          <path d="M300 186v18M272 204h56" stroke="#c9a96a" stroke-width="3"/>
+          <path d="M238 116a62 62 0 0 0 100 50" stroke="#c9a96a" stroke-width="3"/>
+          <circle cx="292" cy="112" r="50" fill="#1f4e79"/>
+          <path d="M260 92c10 4 16-2 24 4s2 16 12 18 10-10 20-6M270 136c8-4 14 2 20-2s4-10 12-10" stroke="#9fc29a" stroke-width="2.5"/>
+          <ellipse cx="292" cy="112" rx="22" ry="50"/>
+          <path d="M242 112h100M248 88h88M248 136h88" stroke-opacity=".55"/>
+        </g>
+
+        <!-- pencil cup -->
+        <g stroke="#e8d7b0" stroke-width="2">
+          <path d="M398 142l-10-60 6-10 6 8 8 62" fill="#d9a441"/>
+          <path d="M418 142l2-74 6-8 4 10-2 72" fill="#c9a96a"/>
+          <path d="M438 142l14-56 8-6 2 10-14 52" fill="#7a2335"/>
+          <rect x="384" y="138" width="72" height="66" rx="6" fill="#14213d"/>
+          <path d="M384 154h72M384 188h72" stroke="#c9a96a"/>
+        </g>
+
+        <!-- open book -->
+        <g stroke="#e8d7b0" stroke-width="2">
+          <path d="M530 158c-14-8-34-10-50-6v46c16-4 36-2 50 6 14-8 34-10 50-6v-46c-16-4-36-2-50 6z" fill="#f7f4ee" fill-opacity=".12"/>
+          <path d="M530 158v46"/>
+          <path d="M490 166c10-2 22-1 32 3M490 178c10-2 22-1 32 3M538 169c10-4 22-5 32-3M538 181c10-4 22-5 32-3" stroke="#c9a96a" stroke-width="1.5"/>
+        </g>
+
+        <!-- small stars / sparkle accents -->
+        <g stroke="#c9a96a" stroke-width="2">
+          <path d="M216 40v12M210 46h12"/>
+          <path d="M372 30v10M367 35h10"/>
+          <path d="M500 96v10M495 101h10"/>
+        </g>
+      </svg>
+
       <div class="ornament"></div>
       <h1 data-welcome>Welcome to My Class</h1>
       <p class="teacher" data-teacher>Rabbi Eisgrau</p>
-      <a class="btn-start" href="menu.html">Get Started</a>
     </div>
+
+    <a class="btn-start" href="menu.html">
+      Get Started
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    </a>
   </section>
 </body>
 </html>

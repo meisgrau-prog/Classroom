@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Teacher Portal – Rabbi Eisgrau</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="data.js"></script>
+  <script src="common.js"></script>
+</head>
+<body class="portal">
+  <header class="topbar">
+    <span class="brand">Teacher Portal</span>
+    <div class="top-actions">
+      <a class="back" href="menu.html" target="_blank" rel="noopener">View site ↗</a>
+      <button class="back hidden" id="signout" type="button">Sign out</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- ================= SIGN IN ================= -->
+    <section id="signin" class="card">
+      <h1 class="page-title">Sign In</h1>
+      <hr class="rule">
+      <p>Paste your GitHub key to make changes. The key stays only in this browser. It is never shown on the website or sent anywhere except GitHub.</p>
+      <div class="field">
+        <label for="token">GitHub key</label>
+        <input type="password" id="token" autocomplete="off" spellcheck="false" placeholder="github_pat_…">
+      </div>
+      <div class="field">
+        <label style="display:flex;gap:8px;align-items:center;font-weight:400">
+          <input type="checkbox" id="remember" checked> Keep me signed in on this device
+        </label>
+        <p class="help">Uncheck this on a shared or school computer.</p>
+      </div>
+      <button class="button" id="signin-btn" type="button">Sign in</button>
+      <p class="status err" id="signin-msg"></p>
+
+      <details style="margin-top:20px">
+        <summary>How do I get my GitHub key? (one time only)</summary>
+        <ol class="steps">
+          <li>Sign in to GitHub, then open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com/settings/personal-access-tokens/new</a>.</li>
+          <li><b>Token name:</b> type <i>Classroom portal</i>.</li>
+          <li><b>Expiration:</b> choose the longest option (or a custom date at the end of the school year).</li>
+          <li><b>Repository access:</b> choose <i>Only select repositories</i>, then pick <b>Classroom</b>.</li>
+          <li><b>Permissions → Repository permissions → Contents:</b> change to <b>Read and write</b>.</li>
+          <li>Click <b>Generate token</b>, copy the key that starts with <code>github_pat_</code>, and paste it above.</li>
+        </ol>
+        <p class="help">Keep this key private, like a password. Don't email it or share it with anyone.</p>
+      </details>
+    </section>
+
+    <!-- ================= EDITOR ================= -->
+    <section id="editor" class="hidden">
+      <div class="card">
+        <div class="switch-row">
+          <div>
+            <h2 class="section-title">“No Homework” Banner</h2>
+            <p class="help" style="margin:0">Shows a yellow banner at the top of the choices page.</p>
+          </div>
+          <div class="row">
+            <span class="switch-state" id="nohw-state">Off</span>
+            <label class="switch" aria-label="No homework banner on or off">
+              <input type="checkbox" id="nohw-on">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+        <div class="field" style="margin:16px 0 0">
+          <label for="nohw-msg">Banner text</label>
+          <input type="text" id="nohw-msg">
+        </div>
+        <div id="nohw-preview" style="margin-top:16px"></div>
+      </div>
+
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" data-tab="classwork" aria-selected="true">Classwork</button>
+        <button class="tab" role="tab" data-tab="homework" aria-selected="false">Homework</button>
+        <button class="tab" role="tab" data-tab="news" aria-selected="false">News</button>
+      </div>
+
+      <div id="panel-classwork" class="panel"></div>
+      <div id="panel-homework" class="panel hidden"></div>
+      <div id="panel-news" class="panel hidden"></div>
+    </section>
+  </main>
+
+  <div class="savebar hidden" id="savebar">
+    <span class="msg" id="save-msg">All changes saved.</span>
+    <button class="button" id="save-btn" type="button">Save &amp; Publish</button>
+  </div>
+
+  <script src="portal.js"></script>
+</body>
+</html>

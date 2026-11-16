@@ -1,0 +1,446 @@
+// Teacher Portal: edits content.json and uploads files in the GitHub
+// repository using the teacher's own GitHub key (stored only in this browser).
+
+const API = "https://api.github.com";
+const OWNER = SITE.github.owner;
+const REPO = SITE.github.repo;
+const TOKEN_KEY = "classroom_portal_token";
+
+let token = null;
+let branch = "main";
+let content = null;
+let dirty = false;
+const pendingFiles = new Map(); // pendingId -> File
+let pendingCounter = 0;
+
+const $ = id => document.getElementById(id);
+
+/* ---------------- storage ---------------- */
+function readToken() {
+  try { return localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY); } catch { return null; }
+}
+function saveToken(t, remember) {
+  try {
+    (remember ? localStorage : sessionStorage).setItem(TOKEN_KEY, t);
+    (remember ? sessionStorage : localStorage).removeItem(TOKEN_KEY);
+  } catch {}
+}
+function forgetToken() {
+  try { localStorage.removeItem(TOKEN_KEY); sessionStorage.removeItem(TOKEN_KEY); } catch {}
+}
+
+/* ---------------- GitHub API ---------------- */
+async function gh(path, options = {}) {
+  const headers = {
+    "Accept": "application/vnd.github+json",
+    "Authorization": "Bearer " + token,
+    "X-GitHub-Api-Version": "2022-11-28"
+  };
+  if (options.body) headers["Content-Type"] = "application/json";
+  const res = await fetch(API + path, { ...options, headers, cache: "no-store" });
+  if (!res.ok) {
+    let message = "GitHub error " + res.status;
+    try { const j = await res.json(); if (j.message) message = j.message; } catch {}
+    const err = new Error(message);
+    err.status = res.status;
+    throw err;
+  }
+  return res.status === 204 ? null : res.json();
+}
+const contentsPath = p => `/repos/${OWNER}/${REPO}/contents/` + p.split("/").map(encodeURIComponent).join("/");
+
+function b64EncodeUtf8(str) {
+  const bytes = new TextEncoder().encode(str);
+  let bin = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+function b64DecodeUtf8(b64) {
+  const bin = atob(b64.replace(/\s/g, ""));
+  return new TextDecoder().decode(Uint8Array.from(bin, c => c.charCodeAt(0)));
+}
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result).split(",")[1] || "");
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(file);
+  });
+}
+
+/* ---------------- content ---------------- */
+function today() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function normalize(c) {
+  c = c || {};
+  c.noHomework = Object.assign({ on: false, message: "No homework tonight!" }, c.noHomework);
+  c.classwork = Object.assign({ title: "Today's Classwork", date: "", notes: "", files: [] }, c.classwork);
+  c.homework = Object.assign({ title: "Today's Homework", date: "", due: "", notes: "", files: [] }, c.homework);
+  c.news = Array.isArray(c.news) ? c.news : [];
+  c.news.forEach(n => { n.files = n.files || []; n.id = n.id || "n" + Math.random().toString(36).slice(2, 8); });
+  return c;
+}
+
+async function loadFromGitHub() {
+  try {
+    const f = await gh(contentsPath("content.json") + "?ref=" + encodeURIComponent(branch));
+    content = normalize(JSON.parse(b64DecodeUtf8(f.content)));
+  } catch (e) {
+    if (e.status === 404) content = normalize({});
+    else throw e;
+  }
+}
+
+/* ---------------- sign in ---------------- */
+async function signIn(t, remember) {
+  token = t.trim();
+  const repo = await gh(`/repos/${OWNER}/${REPO}`);
+  branch = repo.default_branch || "main";
+  await loadFromGitHub();
+  if (remember !== undefined) saveToken(token, remember);
+  $("signin").classList.add("hidden");
+  $("editor").classList.remove("hidden");
+  $("savebar").classList.remove("hidden");
+  $("signout").classList.remove("hidden");
+  renderAll();
+  setDirty(false);
+}
+
+$("signin-btn").addEventListener("click", async () => {
+  const t = $("token").value.trim();
+  const msg = $("signin-msg");
+  msg.textContent = "";
+  if (!t) { msg.textContent = "Please paste your GitHub key."; return; }
+  $("signin-btn").disabled = true;
+  $("signin-btn").textContent = "Signing in…";
+  try {
+    await signIn(t, $("remember").checked);
+    $("token").value = "";
+  } catch (e) {
+    token = null;
+    msg.textContent = e.status === 401
+      ? "That key didn't work. Check that you copied the whole key."
+      : e.status === 404
+        ? `This key can't see the ${REPO} repository. When making the key, choose "Only select repositories" and pick ${REPO}.`
+        : "Couldn't sign in: " + e.message;
+  } finally {
+    $("signin-btn").disabled = false;
+    $("signin-btn").textContent = "Sign in";
+  }
+});
+$("token").addEventListener("keydown", e => { if (e.key === "Enter") $("signin-btn").click(); });
+
+$("signout").addEventListener("click", () => {
+  if (dirty && !confirm("You have unsaved changes. Sign out anyway?")) return;
+  forgetToken();
+  dirty = false;
+  location.reload();
+});
+
+/* ---------------- dirty / save bar ---------------- */
+function setDirty(v) {
+  dirty = v;
+  const m = $("save-msg");
+  m.className = "msg";
+  m.textContent = v ? "You have unsaved changes." : "All changes saved.";
+}
+const changed = () => setDirty(true);
+window.addEventListener("beforeunload", e => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
+
+/* ---------------- UI builders ---------------- */
+function field(labelText, input, help) {
+  const wrap = el("div", "field");
+  const id = "f" + Math.random().toString(36).slice(2, 9);
+  input.id = id;
+  const label = el("label", null, labelText);
+  label.htmlFor = id;
+  wrap.append(label, input);
+  if (help) wrap.appendChild(el("p", "help", help));
+  return wrap;
+}
+function textInput(obj, key, placeholder) {
+  const i = el("input");
+  i.type = "text";
+  i.value = obj[key] || "";
+  if (placeholder) i.placeholder = placeholder;
+  i.addEventListener("input", () => { obj[key] = i.value; changed(); });
+  return i;
+}
+function textArea(obj, key, placeholder) {
+  const t = el("textarea");
+  t.value = obj[key] || "";
+  if (placeholder) t.placeholder = placeholder;
+  t.addEventListener("input", () => { obj[key] = t.value; changed(); });
+  return t;
+}
+function dateField(labelText, obj, key) {
+  const wrap = el("div", "field");
+  const id = "f" + Math.random().toString(36).slice(2, 9);
+  const label = el("label", null, labelText);
+  label.htmlFor = id;
+  const row = el("div", "row");
+  const i = el("input");
+  i.type = "date"; i.id = id; i.value = obj[key] || "";
+  i.addEventListener("input", () => { obj[key] = i.value; changed(); });
+  const btn = el("button", "small-btn", "Today");
+  btn.type = "button";
+  btn.addEventListener("click", () => { i.value = obj[key] = today(); changed(); });
+  const clear = el("button", "small-btn", "Clear");
+  clear.type = "button";
+  clear.addEventListener("click", () => { i.value = obj[key] = ""; changed(); });
+  row.append(i, btn, clear);
+  wrap.append(label, row);
+  return wrap;
+}
+
+function filesEditor(files, labelText) {
+  const wrap = el("div", "field");
+  wrap.appendChild(el("span", "label-text", labelText));
+  const list = el("ul", "file-list");
+  wrap.appendChild(list);
+
+  function draw() {
+    list.innerHTML = "";
+    if (files.length === 0) {
+      const li = el("li");
+      li.appendChild(el("span", "fname help", "No documents posted."));
+      list.appendChild(li);
+    }
+    files.forEach((f, idx) => {
+      const li = el("li");
+      li.innerHTML = ICON_FILE;
+      li.appendChild(el("span", "fname", f.name));
+      if (f.pendingId) li.appendChild(el("span", "tag", "New – not saved yet"));
+      else {
+        const view = el("a", "link", "View");
+        view.href = f.path; view.target = "_blank"; view.rel = "noopener";
+        li.appendChild(view);
+      }
+      const rm = el("button", "small-btn danger", "Remove");
+      rm.type = "button";
+      rm.addEventListener("click", () => {
+        if (f.pendingId) pendingFiles.delete(f.pendingId);
+        files.splice(idx, 1);
+        changed();
+        draw();
+      });
+      li.appendChild(rm);
+      list.appendChild(li);
+    });
+  }
+
+  const zone = el("label", "upload-zone");
+  zone.appendChild(document.createTextNode("＋ Upload documents (PDF, Word, PowerPoint, images) — click or drag files here"));
+  const input = el("input");
+  input.type = "file";
+  input.multiple = true;
+  input.accept = ".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.png,.jpg,.jpeg,.gif,.webp,.txt";
+  zone.appendChild(input);
+
+  function addFiles(fileList) {
+    for (const file of fileList) {
+      if (file.size > 50 * 1024 * 1024) { alert(`"${file.name}" is too big (over 50 MB).`); continue; }
+      const id = "p" + (++pendingCounter);
+      pendingFiles.set(id, file);
+      files.push({ name: file.name, pendingId: id });
+    }
+    changed();
+    draw();
+  }
+  input.addEventListener("change", () => { addFiles(input.files); input.value = ""; });
+  zone.addEventListener("dragover", e => { e.preventDefault(); zone.classList.add("drag"); });
+  zone.addEventListener("dragleave", () => zone.classList.remove("drag"));
+  zone.addEventListener("drop", e => { e.preventDefault(); zone.classList.remove("drag"); addFiles(e.dataTransfer.files); });
+
+  wrap.appendChild(zone);
+  draw();
+  return wrap;
+}
+
+function assignmentPanel(key, withDue) {
+  const panel = $("panel-" + key);
+  panel.innerHTML = "";
+  const data = content[key];
+  const card = el("div", "card");
+  card.appendChild(field("Title", textInput(data, "title")));
+  if (withDue) {
+    const two = el("div", "two");
+    two.append(dateField("Date", data, "date"), dateField("Due date", data, "due"));
+    card.appendChild(two);
+  } else {
+    card.appendChild(dateField("Date", data, "date"));
+  }
+  card.appendChild(field("Instructions / notes", textArea(data, "notes", "Optional")));
+  card.appendChild(filesEditor(data.files, "Documents"));
+  panel.appendChild(card);
+}
+
+function newsPanel() {
+  const panel = $("panel-news");
+  panel.innerHTML = "";
+  const add = el("button", "button", "＋ Add news item");
+  add.type = "button";
+  add.style.marginBottom = "16px";
+  add.addEventListener("click", () => {
+    content.news.unshift({ id: "n" + Date.now(), title: "", date: today(), text: "", files: [] });
+    changed();
+    newsPanel();
+    const first = panel.querySelector(".card input[type=text]");
+    if (first) first.focus();
+  });
+  panel.appendChild(add);
+
+  if (content.news.length === 0) {
+    const c = el("div", "card");
+    c.appendChild(el("p", "empty", "No news yet. Click “Add news item” to post one."));
+    panel.appendChild(c);
+  }
+
+  content.news.forEach((item, idx) => {
+    const card = el("div", "card news-item");
+    card.appendChild(field("Headline", textInput(item, "title", "e.g. Field trip on Friday")));
+    card.appendChild(dateField("Date", item, "date"));
+    card.appendChild(field("Details", textArea(item, "text")));
+    card.appendChild(filesEditor(item.files, "Attachments (optional)"));
+
+    const row = el("div", "row");
+    row.style.justifyContent = "flex-end";
+    if (idx > 0) {
+      const up = el("button", "small-btn", "↑ Move up");
+      up.type = "button";
+      up.addEventListener("click", () => {
+        [content.news[idx - 1], content.news[idx]] = [content.news[idx], content.news[idx - 1]];
+        changed(); newsPanel();
+      });
+      row.appendChild(up);
+    }
+    if (idx < content.news.length - 1) {
+      const down = el("button", "small-btn", "↓ Move down");
+      down.type = "button";
+      down.addEventListener("click", () => {
+        [content.news[idx + 1], content.news[idx]] = [content.news[idx], content.news[idx + 1]];
+        changed(); newsPanel();
+      });
+      row.appendChild(down);
+    }
+    const del = el("button", "small-btn danger", "Delete news item");
+    del.type = "button";
+    del.addEventListener("click", () => {
+      if (!confirm("Delete this news item?")) return;
+      item.files.forEach(f => f.pendingId && pendingFiles.delete(f.pendingId));
+      content.news.splice(idx, 1);
+      changed(); newsPanel();
+    });
+    row.appendChild(del);
+    card.appendChild(row);
+    panel.appendChild(card);
+  });
+}
+
+function bannerControls() {
+  const on = $("nohw-on"), msg = $("nohw-msg"), state = $("nohw-state"), preview = $("nohw-preview");
+  function drawPreview() {
+    state.textContent = content.noHomework.on ? "On" : "Off";
+    preview.innerHTML = "";
+    const b = noHomeworkBanner({ noHomework: { on: true, message: content.noHomework.message } });
+    b.style.margin = "0";
+    b.style.opacity = content.noHomework.on ? "1" : ".35";
+    preview.appendChild(b);
+    if (!content.noHomework.on) preview.appendChild(el("p", "help", "Preview — the banner is OFF and not shown on the site."));
+  }
+  on.checked = !!content.noHomework.on;
+  msg.value = content.noHomework.message || "";
+  on.onchange = () => { content.noHomework.on = on.checked; changed(); drawPreview(); };
+  msg.oninput = () => { content.noHomework.message = msg.value; changed(); drawPreview(); };
+  drawPreview();
+}
+
+function renderAll() {
+  bannerControls();
+  assignmentPanel("classwork", false);
+  assignmentPanel("homework", true);
+  newsPanel();
+}
+
+document.querySelectorAll(".tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach(t => t.setAttribute("aria-selected", t === tab ? "true" : "false"));
+    document.querySelectorAll(".panel").forEach(p => p.classList.toggle("hidden", p.id !== "panel-" + tab.dataset.tab));
+  });
+});
+
+/* ---------------- save & publish ---------------- */
+function safeName(name) {
+  const dot = name.lastIndexOf(".");
+  const base = (dot > 0 ? name.slice(0, dot) : name).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "file";
+  const ext = dot > 0 ? name.slice(dot + 1).toLowerCase().replace(/[^a-z0-9]/g, "") : "";
+  return ext ? `${base}.${ext}` : base;
+}
+function allFileLists() {
+  return [content.classwork.files, content.homework.files, ...content.news.map(n => n.files)];
+}
+
+$("save-btn").addEventListener("click", async () => {
+  const btn = $("save-btn"), msg = $("save-msg");
+  btn.disabled = true;
+  msg.className = "msg";
+  try {
+    // 1. Upload any new documents
+    const toUpload = allFileLists().flat().filter(f => f.pendingId);
+    let n = 0;
+    for (const f of toUpload) {
+      n++;
+      msg.textContent = `Uploading ${n} of ${toUpload.length}: ${f.name}…`;
+      const file = pendingFiles.get(f.pendingId);
+      const stamp = new Date().toISOString().replace(/[-:T]/g, "").slice(0, 14);
+      const path = `uploads/${stamp}-${safeName(f.name)}`;
+      await gh(contentsPath(path), {
+        method: "PUT",
+        body: JSON.stringify({ message: `Upload ${f.name}`, content: await fileToBase64(file), branch })
+      });
+      pendingFiles.delete(f.pendingId);
+      delete f.pendingId;
+      f.path = path;
+    }
+
+    // 2. Save content.json
+    msg.textContent = "Publishing…";
+    let sha;
+    try {
+      sha = (await gh(contentsPath("content.json") + "?ref=" + encodeURIComponent(branch))).sha;
+    } catch (e) { if (e.status !== 404) throw e; }
+    const body = { message: "Update class website from Teacher Portal", content: b64EncodeUtf8(JSON.stringify(content, null, 2) + "\n"), branch };
+    if (sha) body.sha = sha;
+    await gh(contentsPath("content.json"), { method: "PUT", body: JSON.stringify(body) });
+
+    setDirty(false);
+    renderAll();
+    msg.textContent = "✓ Published! The website updates in 1–2 minutes.";
+  } catch (e) {
+    msg.className = "msg err";
+    msg.textContent = (e.status === 403 || e.status === 404)
+      ? "Couldn't save: your key needs “Contents: Read and write” permission for the Classroom repository."
+      : e.status === 401
+        ? "Your key has expired or is no longer valid. Sign out and sign in with a new key."
+        : "Couldn't save: " + e.message + ". Please try again.";
+    renderAll();
+    dirty = true;
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+/* ---------------- start ---------------- */
+(async () => {
+  const saved = readToken();
+  if (!saved) return;
+  try {
+    await signIn(saved);
+  } catch (e) {
+    token = null;
+    if (e.status === 401) forgetToken();
+    $("signin-msg").textContent = e.status === 401 ? "Your saved key has expired. Please sign in again." : "Couldn't connect to GitHub: " + e.message;
+  }
+})();

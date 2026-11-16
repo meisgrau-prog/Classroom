@@ -14,6 +14,13 @@
     <a class="back" href="menu.html">← All sections</a>
   </header>
   <main id="content"></main>
-  <script>renderAssignment(SITE.homework, document.getElementById("content"));</script>
+  <script>
+    const main = document.getElementById("content");
+    loadContent().then(c => {
+      const b = noHomeworkBanner(c);
+      if (b) main.appendChild(b);
+      renderAssignment(c.homework, main);
+    }).catch(() => showLoadError(main));
+  </script>
 </body>
 </html>

@@ -20,23 +20,31 @@
   </main>
   <script>
     const list = document.getElementById("news");
-    if (!SITE.news || SITE.news.length === 0) {
-      list.innerHTML = '<div class="card empty">No news yet. Please check back soon.</div>';
-    } else {
-      SITE.news.forEach(item => {
-        const card = document.createElement("article");
-        card.className = "card news-item";
-        const h = document.createElement("h2");
-        h.textContent = item.title;
-        const d = document.createElement("p");
-        d.className = "date";
-        d.textContent = item.date || "";
-        const p = document.createElement("p");
-        p.textContent = item.text;
-        card.append(h, d, p);
+    loadContent().then(c => {
+      const items = c.news || [];
+      if (items.length === 0) {
+        list.innerHTML = '<div class="card empty">No news yet. Please check back soon.</div>';
+        return;
+      }
+      items.forEach(item => {
+        const card = el("article", "card news-item");
+        card.appendChild(el("h2", null, item.title));
+        if (item.date) card.appendChild(el("p", "date", formatDate(item.date)));
+        if (item.text) card.appendChild(el("p", "news-text", item.text));
+        (item.files || []).forEach(f => {
+          const row = el("div", "attachment");
+          row.innerHTML = ICON_FILE;
+          row.appendChild(el("span", "attachment-name", f.name));
+          const view = el("a", "link", "View");
+          view.href = f.path; view.target = "_blank"; view.rel = "noopener";
+          const dl = el("a", "link", "Download");
+          dl.href = f.path; dl.setAttribute("download", f.name);
+          row.append(view, dl);
+          card.appendChild(row);
+        });
         list.appendChild(card);
       });
-    }
+    }).catch(() => showLoadError(list));
   </script>
 </body>
 </html>
