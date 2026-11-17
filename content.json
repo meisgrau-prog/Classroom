@@ -1,13 +1,15 @@
 {
   "noHomework": {
-    "on": true,
+    "on": false,
     "message": "No homework tonight!"
   },
   "classwork": {
     "title": "Today's Classwork",
     "date": "2026-11-16",
     "notes": "Complete both sections. Show your work!",
-    "files": []
+    "files": [
+      { "name": "classwork.pdf", "path": "classwork.pdf" }
+    ]
   },
   "homework": {
     "title": "Today's Homework",
@@ -15,10 +17,7 @@
     "due": "2026-11-17",
     "notes": "Bring it to class tomorrow.",
     "files": [
-      {
-        "name": "homework.pdf",
-        "path": "homework.pdf"
-      }
+      { "name": "homework.pdf", "path": "homework.pdf" }
     ]
   },
   "news": [

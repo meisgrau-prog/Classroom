@@ -1,8 +1,8 @@
 # Rabbi Eisgrau's Class Website
 
 ## Pages
-- **Welcome page** (`index.html`) – welcome message and Get Started button
-- **Choices page** (`menu.html`) – Classwork, Homework, News, Contact Me (+ the yellow "No homework" banner when it's on)
+- **Home page** (`index.html`) – welcome, section buttons on the side, Contact Me bar at the bottom
+- (`menu.html` now just forwards to the home page)
 - **Classwork / Homework** – preview and download posted documents
 - **News** – class announcements with optional attachments
 - **Contact Me** – call button and an email form
@@ -10,7 +10,7 @@
 
 ## Using the Teacher Portal
 Open **https://meisgrau-prog.github.io/Classroom/portal.html**
-(there's also a small "Teacher Portal" link at the bottom of the choices page).
+(the portal is not linked anywhere on the site — bookmark it).
 
 1. Sign in with your GitHub key (see below — one time only).
 2. Turn the **No Homework banner** on/off and edit its text.

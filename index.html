@@ -9,11 +9,12 @@
   <script src="common.js"></script>
 </head>
 <body class="landing-body">
-  <section class="landing">
-    <div class="landing-inner">
+  <div class="home">
+    <div id="banner"></div>
 
-      <!-- Classroom illustration: books & apple, globe, pencil cup, open book -->
-      <svg class="classroom-art" viewBox="0 0 600 230" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <div class="home-main">
+      <section class="home-hero">
+        <svg class="classroom-art" viewBox="0 0 600 230" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <!-- shelf -->
         <path d="M20 204h560" stroke="#c9a96a" stroke-width="3"/>
         <path d="M40 204v10M560 204v10" stroke="#c9a96a" stroke-width="3"/>
@@ -70,16 +71,52 @@
           <path d="M500 96v10M495 101h10"/>
         </g>
       </svg>
+        <div class="ornament"></div>
+        <h1 data-welcome>Welcome to My Class</h1>
+        <p class="teacher" data-teacher>Rabbi Eisgrau</p>
+      </section>
 
-      <div class="ornament"></div>
-      <h1 data-welcome>Welcome to My Class</h1>
-      <p class="teacher" data-teacher>Rabbi Eisgrau</p>
+      <nav class="home-nav" aria-label="Class sections">
+        <a class="side-btn" href="classwork.html">
+          <svg viewBox="0 0 64 64" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M32 16c-6-5-15-6-24-5v38c9-1 18 0 24 5 6-5 15-6 24-5V11c-9-1-18 0-24 5z"/>
+            <path d="M32 16v38"/>
+            <path class="accent" d="M15 22c4 0 8 1 11 3M15 30c4 0 8 1 11 3M38 25c3-2 7-3 11-3M38 33c3-2 7-3 11-3"/>
+          </svg>
+          <span>Today's Classwork</span>
+        </a>
+        <a class="side-btn" href="homework.html">
+          <svg viewBox="0 0 64 64" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M40 8H16a4 4 0 0 0-4 4v40a4 4 0 0 0 4 4h32a4 4 0 0 0 4-4V20z"/>
+            <path d="M40 8v12h12"/>
+            <path class="accent" d="M20 30h20M20 38h14"/>
+            <path class="accent" d="M46 34l8-8 4 4-8 8-6 2z"/>
+          </svg>
+          <span>Today's Homework</span>
+        </a>
+        <a class="side-btn" href="news.html">
+          <svg viewBox="0 0 64 64" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M14 12h38v38a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4V24h6"/>
+            <path d="M14 12v38a4 4 0 0 1-4 4"/>
+            <rect x="21" y="20" width="12" height="10"/>
+            <path class="accent" d="M38 21h8M38 28h8M21 37h25M21 44h25"/>
+          </svg>
+          <span>News</span>
+        </a>
+      </nav>
     </div>
 
-    <a class="btn-start" href="menu.html">
-      Get Started
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    <a class="home-contact" href="contact.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 7l10 7 10-7"/></svg>
+      Contact Me
     </a>
-  </section>
+  </div>
+
+  <script>
+    loadContent().then(c => {
+      const b = noHomeworkBanner(c);
+      if (b) document.getElementById("banner").appendChild(b);
+    }).catch(() => {});
+  </script>
 </body>
 </html>

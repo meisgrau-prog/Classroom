@@ -27,72 +27,129 @@ body {
 
 a { color: var(--navy-2); }
 
-/* ================= Welcome (landing) page ================= */
+/* ================= Home page ================= */
 .landing-body { background: var(--navy); }
-.landing {
+.home {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  text-align: center;
   color: #fff;
   background:
-    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(201,169,106,.22), transparent 70%),
+    radial-gradient(ellipse 80% 60% at 30% 0%, rgba(201,169,106,.22), transparent 70%),
     radial-gradient(circle at 1px 1px, rgba(255,255,255,.05) 1px, transparent 0) 0 0 / 22px 22px,
     linear-gradient(170deg, #101a33 0%, var(--navy-2) 100%);
 }
-.landing-inner {
+.home #banner .nohw-banner { margin: 14px 16px 0; }
+
+.home-main {
   flex: 1;
-  display: flex;
-  flex-direction: column;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 320px);
   align-items: center;
-  justify-content: center;
-  padding: 40px 16px 32px;
+  gap: clamp(14px, 5vw, 64px);
+  padding: clamp(18px, 4vw, 48px) clamp(14px, 4vw, 48px);
 }
+.home-hero { text-align: center; min-width: 0; }
 .classroom-art {
   width: 100%;
-  max-width: 560px;
+  max-width: 540px;
   height: auto;
-  margin-bottom: 36px;
+  margin: 0 auto clamp(14px, 3vw, 32px);
+  display: block;
   filter: drop-shadow(0 10px 24px rgba(0,0,0,.35));
 }
-.landing .ornament {
-  width: 72px; height: 2px; background: var(--gold);
-  margin: 0 auto 24px;
+.home .ornament {
+  width: clamp(40px, 8vw, 72px); height: 2px; background: var(--gold);
+  margin: 0 auto clamp(12px, 2.4vw, 22px);
 }
-.landing h1 {
+.home h1 {
   font-family: var(--serif);
   font-weight: 600;
-  font-size: clamp(2.8rem, 8vw, 5.5rem);
+  font-size: clamp(1.7rem, 6.4vw, 4.6rem);
   line-height: 1.05;
-  margin: 0 0 14px;
-  letter-spacing: .5px;
+  margin: 0 0 clamp(6px, 1.5vw, 14px);
+  letter-spacing: .3px;
 }
-.landing .teacher {
+.home .teacher {
   font-family: var(--serif);
-  font-size: clamp(1.4rem, 3.5vw, 2.1rem);
+  font-size: clamp(1.05rem, 2.8vw, 1.9rem);
   color: var(--gold-soft);
   margin: 0;
   font-style: italic;
 }
-.btn-start {
+
+/* side buttons */
+.home-nav {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(10px, 2vw, 16px);
+  min-width: 0;
+}
+.side-btn {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(201,169,106,.6);
+  border-radius: 12px;
+  color: #fff;
+  text-decoration: none;
+  font-family: var(--serif);
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.15;
+  backdrop-filter: blur(2px);
+  transition: background .2s, color .2s, border-color .2s, transform .2s;
+}
+.side-btn svg { width: 40px; height: 40px; flex: none; stroke: var(--gold-soft); transition: stroke .2s; }
+.side-btn svg .accent { stroke: #fff; opacity: .85; }
+.side-btn:hover, .side-btn:focus-visible {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--navy);
+  transform: translateX(-3px);
+}
+.side-btn:hover svg, .side-btn:focus-visible svg { stroke: var(--navy); }
+.side-btn:hover svg .accent, .side-btn:focus-visible svg .accent { stroke: var(--navy); }
+
+/* contact bar across the bottom */
+.home-contact {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 14px;
   width: 100%;
-  padding: 26px 16px;
+  padding: clamp(18px, 3vw, 24px) 16px;
   background: var(--gold);
   color: var(--navy);
   text-decoration: none;
   font-weight: 600;
   letter-spacing: 4px;
   text-transform: uppercase;
-  font-size: clamp(1rem, 2.4vw, 1.25rem);
-  transition: background .2s, letter-spacing .25s;
+  font-size: clamp(1rem, 2.4vw, 1.2rem);
+  transition: background .2s;
 }
-.btn-start svg { width: 26px; height: 26px; transition: transform .25s; }
-.btn-start:hover, .btn-start:focus-visible { background: #d6b878; letter-spacing: 5px; }
-.btn-start:hover svg { transform: translateX(6px); }
+.home-contact svg { width: 26px; height: 26px; }
+.home-contact:hover, .home-contact:focus-visible { background: #d6b878; }
+
+/* phones: same side-by-side layout, just more compact */
+@media (max-width: 640px) {
+  .home-main { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); }
+  .side-btn {
+    flex-direction: column;
+    text-align: center;
+    gap: 6px;
+    padding: 12px 6px;
+    font-size: 1.02rem;
+  }
+  .side-btn svg { width: 30px; height: 30px; }
+  .side-btn:hover, .side-btn:focus-visible { transform: none; }
+}
 
 /* ================= Top bar on inner pages ================= */
 .topbar {
@@ -118,6 +175,24 @@ a { color: var(--navy-2); }
   white-space: nowrap;
 }
 .topbar .back:hover { color: #fff; }
+.home-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border: 1.5px solid var(--gold);
+  border-radius: 999px;
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 1rem;
+  letter-spacing: .5px;
+  transition: background .2s, color .2s;
+}
+.home-btn svg { width: 18px; height: 18px; stroke: var(--gold-soft); }
+.home-btn:hover, .home-btn:focus-visible { background: var(--gold); color: var(--navy); }
+.home-btn:hover svg { stroke: var(--navy); }
+@media (max-width: 420px) { .topbar .brand { font-size: 1.2rem; } }
 
 /* ================= Options (menu) page ================= */
 .menu-page {
@@ -349,25 +424,23 @@ form input:focus, form textarea:focus {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 14px;
-  margin: 20px 20px 0;
-  padding: 20px 24px;
+  gap: 10px;
+  margin: 16px 20px 0;
+  padding: 8px 16px;
   background: #fcd34d;
-  border: 2px solid #eab308;
-  border-radius: 14px;
+  border: 1.5px solid #eab308;
+  border-radius: 10px;
   color: #3b2f05;
   font-family: var(--serif);
-  font-size: clamp(1.6rem, 3.4vw, 2.3rem);
+  font-size: clamp(1.1rem, 2.4vw, 1.45rem);
   font-weight: 700;
+  line-height: 1.2;
   text-align: center;
-  box-shadow: 0 6px 18px rgba(234,179,8,.25);
+  box-shadow: 0 4px 12px rgba(234,179,8,.25);
 }
-.nohw-banner svg { width: 36px; height: 36px; flex: none; }
+
 main .nohw-banner { margin: 0 0 20px; }
 
-.menu-footer { text-align: center; padding: 0 0 18px; }
-.menu-footer a { color: var(--muted); font-size: .85rem; text-decoration: none; letter-spacing: 1px; }
-.menu-footer a:hover { color: var(--navy); text-decoration: underline; }
 
 /* ================= Posted files ================= */
 .file-head {
@@ -471,7 +544,7 @@ details summary { cursor: pointer; font-weight: 600; color: var(--navy); }
 .topbar .top-actions { display: flex; gap: 16px; align-items: center; }
 .topbar button.back { background: none; border: 0; font: inherit; cursor: pointer; padding: 0; }
 .hidden { display: none !important; }
-.nohw-emoji { font-size: 1.3em; line-height: 1; display: inline-block; animation: nohw-bounce 1.6s ease-in-out infinite; }
+.nohw-emoji { font-size: 1.15em; line-height: 1; display: inline-block; animation: nohw-bounce 1.6s ease-in-out infinite; }
 .nohw-emoji:last-child { animation-delay: .3s; }
 @keyframes nohw-bounce { 0%, 100% { transform: translateY(0) rotate(0); } 25% { transform: translateY(-5px) rotate(-8deg); } 50% { transform: translateY(0) rotate(0); } 75% { transform: translateY(-3px) rotate(8deg); } }
 @media (prefers-reduced-motion: reduce) { .nohw-emoji { animation: none; } }

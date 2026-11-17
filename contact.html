@@ -10,8 +10,8 @@
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="index.html" data-teacher>Rabbi Eisgrau</a>
-    <a class="back" href="menu.html">← All sections</a>
+    <a class="home-btn" href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>Home</a>
+    <span class="brand" data-teacher>Rabbi Eisgrau</span>
   </header>
   <main>
     <h1 class="page-title">Contact Me</h1>
@@ -84,14 +84,16 @@
       data._replyto = data.email;
 
       try {
-        const res = await fetch("https://formsubmit.co/ajax/" + SITE.contactEmail, {
+        const res = await fetch("https://formsubmit.co/ajax/" + (SITE.formEmail || SITE.contactEmail), {
           method: "POST",
           headers: { "Content-Type": "application/json", "Accept": "application/json" },
           body: JSON.stringify(data)
         });
-        const result = await res.json();
+        let result = {};
+        try { result = await res.json(); } catch {}
+        const reason = String(result.message || "");
         if (!res.ok || result.success === false || result.success === "false") {
-          throw new Error(result.message || "Send failed");
+          throw new Error(reason || "Error " + res.status);
         }
         form.reset();
         status.className = "status ok";
@@ -104,6 +106,10 @@
         a.href = "mailto:" + SITE.contactEmail;
         a.textContent = SITE.contactEmail;
         status.append(a, " or call " + SITE.phone + ".");
+        const why = document.createElement("small");
+        why.style.cssText = "display:block;margin-top:6px;font-weight:400;opacity:.75";
+        why.textContent = "(Reason: " + (err && err.message ? err.message : "network error") + ")";
+        status.appendChild(why);
       } finally {
         send.disabled = false;
         send.textContent = "Send message";

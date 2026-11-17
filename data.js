@@ -14,8 +14,11 @@ const SITE = {
   welcome: "Welcome to My Class",
   teacherName: "Rabbi Eisgrau",
 
-  // Messages from the Contact page are emailed here
+  // Your email address shown on the Contact page
   contactEmail: "meisgrau@ykwaterbury.org",
+  // Where Contact-form messages are delivered (e.g. your Gmail).
+  // Leave "" to use contactEmail above.
+  formEmail: "",
   // Phone number shown on the Contact page
   phone: "848-210-6960",
 
