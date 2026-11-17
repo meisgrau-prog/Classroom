@@ -14,41 +14,91 @@
     <span class="brand">Teacher Portal</span>
     <div class="top-actions">
       <a class="back" href="index.html" target="_blank" rel="noopener">View site ↗</a>
+      <button class="back hidden" id="changepw-open" type="button">Change password</button>
       <button class="back hidden" id="signout" type="button">Sign out</button>
     </div>
   </header>
 
   <main>
-    <!-- ================= SIGN IN ================= -->
+    <!-- ================= SIGN IN (password) ================= -->
     <section id="signin" class="card">
-      <h1 class="page-title">Sign In</h1>
+      <h1 class="page-title">Teacher Portal</h1>
       <hr class="rule">
-      <p>Paste your GitHub key to make changes. The key stays only in this browser. It is never shown on the website or sent anywhere except GitHub.</p>
       <div class="field">
-        <label for="token">GitHub key</label>
-        <input type="password" id="token" autocomplete="off" spellcheck="false" placeholder="github_pat_…">
+        <label for="password">Password</label>
+        <input type="password" id="password" autocomplete="current-password">
       </div>
       <div class="field">
         <label style="display:flex;gap:8px;align-items:center;font-weight:400">
-          <input type="checkbox" id="remember" checked> Keep me signed in on this device
+          <input type="checkbox" id="remember"> Keep me signed in on this device
         </label>
-        <p class="help">Uncheck this on a shared or school computer.</p>
+        <p class="help">Only check this on your own computer or phone.</p>
       </div>
       <button class="button" id="signin-btn" type="button">Sign in</button>
       <p class="status err" id="signin-msg"></p>
+      <p style="margin-top:22px"><a href="#" id="show-setup" class="link">First-time setup or reset password</a></p>
+    </section>
 
-      <details style="margin-top:20px">
-        <summary>How do I get my GitHub key? (one time only)</summary>
+    <!-- ================= SETUP / RESET ================= -->
+    <section id="setup" class="card hidden">
+      <h1 class="page-title">Set Up Password</h1>
+      <hr class="rule">
+      <p>Do this once. It locks your GitHub key with a password, so after this you (or anyone you give the password to) can sign in with just the password.</p>
+
+      <div class="field">
+        <label for="setup-token">GitHub key</label>
+        <input type="password" id="setup-token" autocomplete="off" spellcheck="false" placeholder="github_pat_… or ghp_…">
+      </div>
+      <details style="margin:-4px 0 18px">
+        <summary>How do I get a GitHub key?</summary>
         <ol class="steps">
-          <li>Sign in to GitHub, then open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com/settings/personal-access-tokens/new</a>.</li>
-          <li><b>Token name:</b> type <i>Classroom portal</i>.</li>
-          <li><b>Expiration:</b> choose the longest option (or a custom date at the end of the school year).</li>
-          <li><b>Repository access:</b> choose <i>Only select repositories</i>, then pick <b>Classroom</b>.</li>
-          <li><b>Permissions → Repository permissions → Contents:</b> change to <b>Read and write</b>.</li>
-          <li>Click <b>Generate token</b>, copy the key that starts with <code>github_pat_</code>, and paste it above.</li>
+          <li>Open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com/settings/personal-access-tokens/new</a>.</li>
+          <li><b>Token name:</b> <i>Classroom portal</i> (or any name you haven't used).</li>
+          <li><b>Expiration:</b> the longest option, or the end of the school year.</li>
+          <li><b>Repository access:</b> <i>Only select repositories</i> → <b>Classroom</b>.</li>
+          <li><b>Permissions:</b> click <i>Add permissions</i> → <b>Contents</b>, then set Contents to <b>Read and write</b>.</li>
+          <li>Click <b>Generate token</b> and copy it.</li>
         </ol>
-        <p class="help">Keep this key private, like a password. Don't email it or share it with anyone.</p>
+        <p class="help">This kind of key can only change your Classroom website — nothing else on your GitHub account — which keeps things safer if the password is ever shared.</p>
       </details>
+
+      <div class="two">
+        <div class="field">
+          <label for="setup-pass">New portal password</label>
+          <input type="password" id="setup-pass" autocomplete="new-password">
+        </div>
+        <div class="field">
+          <label for="setup-pass2">Type it again</label>
+          <input type="password" id="setup-pass2" autocomplete="new-password">
+        </div>
+      </div>
+      <p class="help" style="margin-top:-8px">At least 10 characters. A short phrase works well, like <i>blue-apple-river-42</i>.</p>
+
+      <div class="actions">
+        <button class="button" id="setup-btn" type="button">Save password</button>
+        <button class="button secondary" id="setup-cancel" type="button">Back to sign in</button>
+      </div>
+      <p class="status" id="setup-msg"></p>
+    </section>
+
+    <!-- ================= CHANGE PASSWORD (signed in) ================= -->
+    <section id="changepw" class="card hidden">
+      <h2 class="section-title">Change Portal Password</h2>
+      <div class="two" style="margin-top:12px">
+        <div class="field">
+          <label for="new-pass">New password</label>
+          <input type="password" id="new-pass" autocomplete="new-password">
+        </div>
+        <div class="field">
+          <label for="new-pass2">Type it again</label>
+          <input type="password" id="new-pass2" autocomplete="new-password">
+        </div>
+      </div>
+      <div class="actions">
+        <button class="button" id="changepw-btn" type="button">Change password</button>
+        <button class="button secondary" id="changepw-cancel" type="button">Cancel</button>
+      </div>
+      <p class="status" id="changepw-msg"></p>
     </section>
 
     <!-- ================= EDITOR ================= -->
@@ -57,7 +107,7 @@
         <div class="switch-row">
           <div>
             <h2 class="section-title">“No Homework” Banner</h2>
-            <p class="help" style="margin:0">Shows a yellow banner at the top of the choices page.</p>
+            <p class="help" style="margin:0">Shows a yellow banner at the top of the home page and Homework page.</p>
           </div>
           <div class="row">
             <span class="switch-state" id="nohw-state">Off</span>
@@ -91,6 +141,6 @@
     <button class="button" id="save-btn" type="button">Save &amp; Publish</button>
   </div>
 
-  <script src="portal.js?v=3"></script>
+  <script src="portal.js?v=4"></script>
 </body>
 </html>

@@ -9,22 +9,23 @@
 - **Teacher Portal** (`portal.html`) – where you make changes
 
 ## Using the Teacher Portal
-Open **https://meisgrau-prog.github.io/Classroom/portal.html**
-(the portal is not linked anywhere on the site — bookmark it).
+Open **/portal.html** on your site (it isn't linked anywhere — bookmark it).
 
-1. Sign in with your GitHub key (see below — one time only).
-2. Turn the **No Homework banner** on/off and edit its text.
-3. Use the **Classwork / Homework / News** tabs to change text and upload documents.
-4. Click **Save & Publish**. The website updates in 1–2 minutes.
+Sign in with the **portal password**. Then:
+- Turn the **No Homework banner** on/off and edit its text.
+- Use the **Classwork / Homework / News** tabs to change text and upload documents.
+- Click **Save & Publish**. The website updates in 1–2 minutes.
 
-### Getting your GitHub key (one time)
-1. Go to https://github.com/settings/personal-access-tokens/new
-2. Token name: *Classroom portal*. Expiration: the longest option.
-3. Repository access: **Only select repositories** → **Classroom**.
-4. Permissions → Repository permissions → **Contents: Read and write**.
-5. Click **Generate token**, copy it, and paste it into the portal.
+### First-time setup (or if you forget the password / the GitHub key expires)
+1. Make a GitHub key: https://github.com/settings/personal-access-tokens/new
+   - Repository access: **Only select repositories** → **Classroom**
+   - Permissions → **Contents: Read and write**
+2. In the portal click **First-time setup or reset password**, paste the key,
+   choose a password (10+ characters) and click **Save password**.
 
-Keep the key private like a password. If it expires, make a new one the same way.
+The GitHub key is stored in `portal-key.json`, **locked (encrypted) with the
+password**. Anyone with the password can edit the site, so share it only with
+people you trust, and change it (top right of the portal) if needed.
 
 ## Other settings
 Your name, welcome text, phone number and contact email are in `data.js`.
