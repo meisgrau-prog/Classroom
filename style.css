@@ -136,7 +136,7 @@ a { color: var(--navy-2); }
 /* contact button across the bottom + small login icon */
 .home-bottom {
   position: relative;
-  padding: 0 clamp(14px, 4vw, 48px) 34px;
+  padding: 0 clamp(14px, 4vw, 48px) 38px;
   width: 100%;
   max-width: 1240px;
   margin: 0 auto;
@@ -147,10 +147,10 @@ a { color: var(--navy-2); }
   justify-content: center;
   gap: 14px;
   width: 100%;
-  padding: clamp(16px, 2.6vw, 22px) 16px;
+  padding: clamp(11px, 1.8vw, 14px) 16px;
   background: linear-gradient(180deg, #d4b375 0%, var(--gold) 100%);
   border: 1.5px solid #e8d3a4;
-  border-radius: 14px;
+  border-radius: 999px;
   color: var(--navy);
   text-decoration: none;
   font-weight: 600;
@@ -160,7 +160,7 @@ a { color: var(--navy-2); }
   box-shadow: 0 10px 24px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.35);
   transition: transform .2s, box-shadow .2s, filter .2s;
 }
-.home-contact svg { width: 26px; height: 26px; }
+.home-contact svg { width: 22px; height: 22px; }
 .home-contact:hover, .home-contact:focus-visible {
   transform: translateY(-2px);
   filter: brightness(1.06);
@@ -169,15 +169,17 @@ a { color: var(--navy-2); }
 .login-icon {
   position: absolute;
   right: clamp(14px, 4vw, 48px);
-  bottom: 8px;
+  bottom: 6px;
   display: grid;
   place-items: center;
-  width: 22px; height: 22px;
-  color: rgba(217,195,154,.45);
-  transition: color .2s;
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  color: var(--gold-soft);
+  opacity: .8;
+  transition: opacity .2s, background .2s, color .2s;
 }
-.login-icon svg { width: 14px; height: 14px; }
-.login-icon:hover, .login-icon:focus-visible { color: var(--gold-soft); }
+.login-icon svg { width: 15px; height: 15px; }
+.login-icon:hover, .login-icon:focus-visible { opacity: 1; background: var(--gold); color: var(--navy); }
 
 /* phones: same side-by-side layout, just more compact */
 @media (max-width: 640px) {
