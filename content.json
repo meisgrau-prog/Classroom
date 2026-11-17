@@ -8,10 +8,7 @@
     "date": "2026-11-16",
     "notes": "Complete both sections. Show your work!",
     "files": [
-      {
-        "name": "classwork.pdf",
-        "path": "classwork.pdf"
-      }
+      { "name": "classwork.pdf", "path": "classwork.pdf" }
     ]
   },
   "homework": {
@@ -20,10 +17,7 @@
     "due": "2026-11-17",
     "notes": "Bring it to class tomorrow.",
     "files": [
-      {
-        "name": "homework.pdf",
-        "path": "homework.pdf"
-      }
+      { "name": "homework.pdf", "path": "homework.pdf" }
     ]
   },
   "news": [
