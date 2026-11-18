@@ -1,6 +1,6 @@
 {
   "noHomework": {
-    "on": false,
+    "on": true,
     "message": "No homework tonight!"
   },
   "classwork": {
