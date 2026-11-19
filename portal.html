@@ -130,23 +130,26 @@
         <p class="help" style="margin:0">The teacher name appears on the home page and at the top of every page.</p>
       </div>
 
-      <div class="card">
-        <h2 class="section-title">Banners</h2>
-        <p class="help" style="margin:0">Up to 3 banners (like “No homework tonight!”). Choose the words, color, emojis, and which pages each one shows on.</p>
-      </div>
-      <div id="banners-editor"></div>
 
       <div class="tabs" role="tablist">
         <button class="tab" role="tab" data-tab="classwork" aria-selected="true">Classwork</button>
         <button class="tab" role="tab" data-tab="homework" aria-selected="false">Homework</button>
         <button class="tab" role="tab" data-tab="news" aria-selected="false">News</button>
         <button class="tab" role="tab" data-tab="programs" aria-selected="false">Programs</button>
+        <button class="tab" role="tab" data-tab="banners" aria-selected="false">Banners</button>
       </div>
 
       <div id="panel-classwork" class="panel"></div>
       <div id="panel-homework" class="panel hidden"></div>
       <div id="panel-news" class="panel hidden"></div>
       <div id="panel-programs" class="panel hidden"></div>
+      <div id="panel-banners" class="panel hidden">
+        <div class="card">
+          <h2 class="section-title">Banners</h2>
+          <p class="help" style="margin:0">Up to 3 banners (like “No homework tonight!”). Choose the words, color, emojis, and which pages each one shows on.</p>
+        </div>
+        <div id="banners-editor"></div>
+      </div>
     </section>
   </main>
 
@@ -155,6 +158,6 @@
     <button class="button" id="save-btn" type="button">Save &amp; Publish</button>
   </div>
 
-  <script src="portal.js?v=20261120"></script>
+  <script src="portal.js?v=20261120b"></script>
 </body>
 </html>
