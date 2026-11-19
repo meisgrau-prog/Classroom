@@ -1,6 +1,6 @@
 {
   "noHomework": {
-    "on": true,
+    "on": false,
     "message": "No homework tonight!"
   },
   "classwork": {
@@ -51,7 +51,7 @@
       },
       {
         "name": "דברים שונים",
-        "on": true,
+        "on": false,
         "date": "",
         "notes": "",
         "files": [],
