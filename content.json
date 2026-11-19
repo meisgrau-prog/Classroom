@@ -84,17 +84,11 @@
   },
   "news": [
     {
-      "id": "n1",
-      "title": "Welcome to our class website!",
-      "date": "2026-11-16",
-      "text": "Check here every day for classwork, homework, and news.",
-      "files": []
-    },
-    {
-      "id": "n2",
-      "title": "Field trip permission slips",
-      "date": "2026-11-16",
-      "text": "Please return signed permission slips by Friday.",
+      "id": "n1795106632692",
+      "title": "Check out the new programs",
+      "subtitle": "",
+      "date": "2026-11-19",
+      "text": "",
       "files": []
     }
   ],
