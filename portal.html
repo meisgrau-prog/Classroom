@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
   <title>Teacher Portal – Rabbi Eisgrau</title>
-  <link rel="stylesheet" href="style.css?v=20261121">
-  <script src="data.js?v=20261121"></script>
-  <script src="common.js?v=20261121"></script>
+  <link rel="stylesheet" href="style.css?v=20261122">
+  <script src="data.js?v=20261122"></script>
+  <script src="common.js?v=20261122"></script>
 </head>
 <body class="portal">
   <header class="topbar">
@@ -38,7 +38,7 @@
       <p class="status err" id="signin-msg"></p>
       <p style="margin-top:22px;display:flex;gap:18px;flex-wrap:wrap">
         <a href="#" id="show-setup" class="link">First-time setup or reset password</a>
-        <a href="#" id="show-key" class="link">Sign in with GitHub key instead</a>
+        <a href="#" id="show-key" class="link hidden">Sign in with GitHub key instead</a>
       </p>
     </section>
 
@@ -114,6 +114,20 @@
     </section>
 
     <!-- ================= EDITOR ================= -->
+    <!-- ================= TOP SWITCH: Website editor  |  Classroom tools ================= -->
+    <div class="mode-switch hidden" id="mode-switch" role="tablist" aria-label="Portal sections">
+      <button type="button" class="mode-btn" data-mode="website" aria-selected="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 9h18M8 21h8M12 18v3"/></svg>
+        Website
+      </button>
+      <button type="button" class="mode-btn" data-mode="classroom" aria-selected="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21V8l9-5 9 5v13"/><path d="M9 21v-6h6v6"/><path d="M3 21h18"/></svg>
+        Classroom
+      </button>
+    </div>
+
+    <section id="classroom" class="hidden"></section>
+
     <section id="editor" class="hidden">
       <div class="card">
         <h2 class="section-title">Site Settings</h2>
@@ -187,6 +201,7 @@
     <button class="button" id="save-btn" type="button">Save &amp; Publish</button>
   </div>
 
-  <script src="portal.js?v=20261121"></script>
+  <script src="portal.js?v=20261122"></script>
+  <script src="classroom.js?v=20261122"></script>
 </body>
 </html>

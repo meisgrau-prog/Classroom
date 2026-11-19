@@ -165,13 +165,25 @@ async function connect(t) {
 }
 function openEditor() {
   showOnly(null);
-  $("editor").classList.remove("hidden");
-  $("savebar").classList.remove("hidden");
+  $("mode-switch").classList.remove("hidden");
+  setMode("website");
   $("signout").classList.remove("hidden");
   $("changepw-open").classList.remove("hidden");
   renderAll();
   setDirty(false);
 }
+// Website editor  |  Classroom tools
+function setMode(mode) {
+  const site = mode === "website";
+  document.querySelectorAll(".mode-btn").forEach(b => b.setAttribute("aria-selected", b.dataset.mode === mode ? "true" : "false"));
+  $("editor").classList.toggle("hidden", !site);
+  $("savebar").classList.toggle("hidden", !site);
+  $("classroom").classList.toggle("hidden", site);
+  if (!site && window.Classroom) Classroom.open($("classroom"));
+  window.scrollTo({ top: 0 });
+}
+document.querySelectorAll(".mode-btn").forEach(b => b.addEventListener("click", () => setMode(b.dataset.mode)));
+
 function busy(btn, on, text) {
   btn.disabled = on;
   if (on) { btn.dataset.label = btn.textContent; btn.textContent = text; }
@@ -875,3 +887,12 @@ $("save-btn").addEventListener("click", async () => {
     $("signin-msg").textContent = e.status === 401 ? "Your saved key has expired. Please sign in with a new key." : "Couldn't connect to GitHub: " + e.message;
   }
 })();
+
+addPasswordToggles(document);
+
+// Hidden backup: open the portal as …/portal.html#key to sign in with a GitHub key.
+function checkKeyHash() {
+  if (location.hash === "#key" && !$("signin").classList.contains("hidden")) showOnly("keysignin");
+}
+checkKeyHash();
+window.addEventListener("hashchange", checkKeyHash);
