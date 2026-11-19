@@ -11,8 +11,13 @@
         "name": "גמרא",
         "on": true,
         "date": "2026-11-16",
-        "notes": "Complete both sections. Show your work!",
-        "files": [],
+        "notes": "",
+        "files": [
+          {
+            "name": "Makkos Handout Summary and Extra credit questions 6a-6b line 11-10.pdf",
+            "path": "uploads/20261119163015-makkos-handout-summary-and-extra-credit-questions-6a-6b-line.pdf"
+          }
+        ],
         "id": "s1"
       },
       {
@@ -20,20 +25,25 @@
         "on": true,
         "date": "",
         "notes": "",
-        "files": [],
+        "files": [
+          {
+            "name": "Beraishis 7 Vayetzi Chumish Rashi.pdf",
+            "path": "uploads/20261119163019-beraishis-7-vayetzi-chumish-rashi.pdf"
+          }
+        ],
         "id": "s2"
       },
       {
         "name": "הלכה",
-        "on": true,
-        "date": "",
+        "on": false,
+        "date": "2026-11-19",
         "notes": "",
         "files": [],
         "id": "s3"
       },
       {
         "name": "משניות",
-        "on": true,
+        "on": false,
         "date": "",
         "notes": "",
         "files": [],
