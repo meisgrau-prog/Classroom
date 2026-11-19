@@ -105,19 +105,28 @@
   },
   "programs": [
     {
+      "id": "p1795106429041",
+      "title": "שקלא וטריא",
+      "subtitle": "The conversation of the גמרא",
+      "start": "",
+      "end": "",
+      "text": "The תלמידים copy the steps of the גמרא. this promotes understanding of the structure of גמרא. תלמידים will have their notes bound into a beautiful ספר at the conclusion of the פרק. Participants are entered into a daily, biweekly and end of the year raffle.",
+      "files": []
+    },
+    {
       "id": "p1795106299539",
       "title": "חברת כובתים",
       "subtitle": "Writing during class",
-      "start": "2026-11-19",
+      "start": "",
       "end": "",
-      "text": "The תלמידים write notes on the lesson during class. This promotes participation in and retention of the lesson. There is a daily, biweekly and end of the year raffle for participants. ",
+      "text": "The תלמידים write notes on the lesson during class. This promotes participation in and retention of the lesson. Participants are entered into a daily, biweekly and end of the year raffle.",
       "files": []
     },
     {
       "id": "p1795106120906",
       "title": "גמרא ניגון",
       "subtitle": "Reading גמרא fluently",
-      "start": "2026-11-19",
+      "start": "",
       "end": "",
       "text": "The תלמידים read the גמרא with the proper inflection. This builds fluency and confidence in reading גמרא. There is a pastry given to all participants biweekly or weekly, depending on the tier they choose. ",
       "files": []
