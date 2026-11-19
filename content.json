@@ -143,15 +143,15 @@
     {
       "on": true,
       "message": "",
-      "emojiStart": "⭐",
-      "emojiEnd": "⭐",
+      "emojiStart": "",
+      "emojiEnd": "",
       "color": "blue",
       "pages": [
         "home"
       ]
     },
     {
-      "on": true,
+      "on": false,
       "message": "",
       "emojiStart": "⭐",
       "emojiEnd": "⭐",
