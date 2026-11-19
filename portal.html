@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
   <title>Teacher Portal – Rabbi Eisgrau</title>
-  <link rel="stylesheet" href="style.css?v=20261119b">
-  <script src="data.js?v=20261119b"></script>
-  <script src="common.js?v=20261119b"></script>
+  <link rel="stylesheet" href="style.css?v=20261120">
+  <script src="data.js?v=20261120"></script>
+  <script src="common.js?v=20261120"></script>
 </head>
 <body class="portal">
   <header class="topbar">
@@ -131,25 +131,10 @@
       </div>
 
       <div class="card">
-        <div class="switch-row">
-          <div>
-            <h2 class="section-title">“No Homework” Banner</h2>
-            <p class="help" style="margin:0">Shows a yellow banner at the top of the home page and Homework page.</p>
-          </div>
-          <div class="row">
-            <span class="switch-state" id="nohw-state">Off</span>
-            <label class="switch" aria-label="No homework banner on or off">
-              <input type="checkbox" id="nohw-on">
-              <span class="slider"></span>
-            </label>
-          </div>
-        </div>
-        <div class="field" style="margin:16px 0 0">
-          <label for="nohw-msg">Banner text</label>
-          <input type="text" id="nohw-msg">
-        </div>
-        <div id="nohw-preview" style="margin-top:16px"></div>
+        <h2 class="section-title">Banners</h2>
+        <p class="help" style="margin:0">Up to 3 banners (like “No homework tonight!”). Choose the words, color, emojis, and which pages each one shows on.</p>
       </div>
+      <div id="banners-editor"></div>
 
       <div class="tabs" role="tablist">
         <button class="tab" role="tab" data-tab="classwork" aria-selected="true">Classwork</button>
@@ -170,6 +155,6 @@
     <button class="button" id="save-btn" type="button">Save &amp; Publish</button>
   </div>
 
-  <script src="portal.js?v=20261119b"></script>
+  <script src="portal.js?v=20261120"></script>
 </body>
 </html>

@@ -15,7 +15,7 @@ Click the small 🔒 at the bottom of the home page (or open /portal.html).
 
 Sign in with the **portal password**. (Backup: "Sign in with GitHub key instead".)
 - **Site Settings:** teacher name and welcome message.
-- **No Homework banner:** switch on/off and edit its text.
+- **Banners (up to 3):** words, color, emojis, which pages they show on, and on/off.
 - **Classwork / Homework / News / Programs** tabs: change text and upload documents.
 - Click **Save & Publish**. The website updates in 1–2 minutes.
 

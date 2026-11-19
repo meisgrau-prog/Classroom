@@ -592,22 +592,143 @@ const PROGRAMS_CFG = {
   }
 };
 
-function bannerControls() {
-  const on = $("nohw-on"), msg = $("nohw-msg"), state = $("nohw-state"), preview = $("nohw-preview");
-  function drawPreview() {
-    state.textContent = content.noHomework.on ? "On" : "Off";
-    preview.innerHTML = "";
-    const b = noHomeworkBanner({ noHomework: { on: true, message: content.noHomework.message } });
-    b.style.margin = "0";
-    b.style.opacity = content.noHomework.on ? "1" : ".35";
-    preview.appendChild(b);
-    if (!content.noHomework.on) preview.appendChild(el("p", "help", "Preview — the banner is OFF and not shown on the site."));
+const EMOJI_PICKS = ["🎉","🥳","⭐","🌟","✨","📚","✏️","📝","🍎","🎈","🎊","❤️","👏","😀","☀️","❄️","🍂","🌸","🕯️","✡️","📣","⚠️","⏰","🏆"];
+
+function bannersPanel() {
+  const box = $("banners-editor");
+  box.innerHTML = "";
+  const list = content.banners;
+
+  list.forEach((b, i) => {
+    const card = el("div", "card banner-card");
+    const top = el("div", "banner-top");
+    top.appendChild(el("h3", "section-title", "Banner " + (i + 1)));
+    const right = el("div", "row");
+    const state = el("span", "switch-state", b.on ? "On" : "Off");
+    const sw = el("label", "switch");
+    sw.setAttribute("aria-label", "Banner " + (i + 1) + " on or off");
+    const chk = el("input"); chk.type = "checkbox"; chk.checked = b.on;
+    chk.addEventListener("change", () => { b.on = chk.checked; state.textContent = b.on ? "On" : "Off"; changed(); draw(); });
+    sw.append(chk, el("span", "slider"));
+    right.append(state, sw);
+    top.appendChild(right);
+    card.appendChild(top);
+
+    // words
+    const msg = textInput(b, "message", "e.g. No homework tonight!");
+    msg.addEventListener("input", draw);
+    const f1 = field("Words", msg); f1.style.marginTop = "14px";
+    card.appendChild(f1);
+
+    // emojis
+    const er = el("div", "emoji-row");
+    const emojiField = (label, key) => {
+      const f = el("div", "field");
+      const id = "e" + i + key;
+      const lab = el("label", null, label); lab.htmlFor = id;
+      const inp = el("input"); inp.type = "text"; inp.id = id; inp.className = "emoji-box"; inp.value = b[key]; inp.maxLength = 16;
+      inp.addEventListener("input", () => { b[key] = inp.value.trim(); changed(); draw(); });
+      const picks = el("div", "emoji-picks");
+      const mark = () => picks.querySelectorAll("button").forEach(bt =>
+        bt.setAttribute("aria-pressed", (bt.dataset.emoji || "") === (b[key] || "") ? "true" : "false"));
+      const none = el("button", "no-emoji", "No emoji"); none.type = "button"; none.dataset.emoji = "";
+      none.addEventListener("click", () => { inp.value = b[key] = ""; changed(); draw(); mark(); });
+      picks.appendChild(none);
+      EMOJI_PICKS.forEach(em => {
+        const bt = el("button", null, em); bt.type = "button"; bt.dataset.emoji = em;
+        bt.addEventListener("click", () => { inp.value = b[key] = em; changed(); draw(); mark(); });
+        picks.appendChild(bt);
+      });
+      inp.addEventListener("input", mark);
+      inp.placeholder = "none";
+      mark();
+      f.append(lab, inp, picks);
+      return f;
+    };
+    er.append(emojiField("Emoji before the words", "emojiStart"), emojiField("Emoji after the words", "emojiEnd"));
+    card.appendChild(er);
+
+    // color
+    const cf = el("div", "field");
+    cf.appendChild(el("span", "label-text", "Color"));
+    const sw2 = el("div", "swatches");
+    const swatchButtons = [];
+    Object.entries(BANNER_COLORS).forEach(([key, col]) => {
+      const bt = el("button", "swatch"); bt.type = "button";
+      bt.style.background = col.bg; bt.style.borderColor = col.border;
+      bt.title = col.name; bt.setAttribute("aria-label", col.name);
+      bt.addEventListener("click", () => { b.color = key; changed(); draw(); });
+      bt.dataset.key = key;
+      swatchButtons.push(bt);
+      sw2.appendChild(bt);
+    });
+    const custom = el("label", "custom-color");
+    const picker = el("input"); picker.type = "color";
+    picker.value = /^#[0-9a-f]{6}$/i.test(b.color) ? b.color : "#7c3aed";
+    picker.addEventListener("input", () => { b.color = picker.value; changed(); draw(); });
+    custom.append(picker, document.createTextNode("Any color"));
+    sw2.appendChild(custom);
+    cf.appendChild(sw2);
+    card.appendChild(cf);
+
+    // pages
+    const pf = el("div", "field");
+    pf.appendChild(el("span", "label-text", "Show on these pages"));
+    const checks = el("div", "page-checks");
+    BANNER_PAGES.forEach(([key, label]) => {
+      const lab = el("label");
+      const c = el("input"); c.type = "checkbox"; c.checked = b.pages.includes(key);
+      c.addEventListener("change", () => {
+        b.pages = BANNER_PAGES.map(p => p[0]).filter(k => k === key ? c.checked : b.pages.includes(k));
+        changed(); draw();
+      });
+      lab.append(c, document.createTextNode(label));
+      checks.appendChild(lab);
+    });
+    pf.appendChild(checks);
+    card.appendChild(pf);
+
+    // preview
+    const pv = el("div", "banner-preview");
+    card.appendChild(el("span", "label-text", "Preview"));
+    card.appendChild(pv);
+    const note = el("p", "help");
+    card.appendChild(note);
+
+    const del = el("button", "small-btn danger", "Delete this banner");
+    del.type = "button"; del.style.marginTop = "12px";
+    del.addEventListener("click", () => {
+      if (!confirm("Delete Banner " + (i + 1) + "?")) return;
+      list.splice(i, 1); changed(); bannersPanel();
+    });
+    card.appendChild(del);
+
+    function draw() {
+      pv.innerHTML = "";
+      const shown = makeBanner(Object.assign({}, b, { message: b.message || "Your words here" }));
+      shown.style.opacity = b.on ? "1" : ".4";
+      pv.appendChild(shown);
+      swatchButtons.forEach(bt => bt.setAttribute("aria-pressed", bt.dataset.key === b.color ? "true" : "false"));
+      note.textContent = !b.on ? "This banner is OFF and not shown on the site."
+        : !b.message.trim() ? "Type some words to show this banner."
+        : !b.pages.length ? "Pick at least one page to show this banner on."
+        : "Showing on: " + BANNER_PAGES.filter(p => b.pages.includes(p[0])).map(p => p[1]).join(", ") + ".";
+    }
+    draw();
+    box.appendChild(card);
+  });
+
+  if (list.length < MAX_BANNERS) {
+    const add = el("button", "button secondary", "＋ Add a banner");
+    add.type = "button"; add.style.marginBottom = "20px";
+    add.addEventListener("click", () => {
+      list.push({ on: true, message: "", emojiStart: "⭐", emojiEnd: "⭐", color: "blue", pages: ["home"] });
+      changed(); bannersPanel();
+      const inputs = box.querySelectorAll(".banner-card");
+      inputs[inputs.length - 1].querySelector("input[type=text]").focus();
+    });
+    box.appendChild(add);
   }
-  on.checked = !!content.noHomework.on;
-  msg.value = content.noHomework.message || "";
-  on.onchange = () => { content.noHomework.on = on.checked; changed(); drawPreview(); };
-  msg.oninput = () => { content.noHomework.message = msg.value; changed(); drawPreview(); };
-  drawPreview();
 }
 
 function settingsControls() {
@@ -620,7 +741,7 @@ function settingsControls() {
 
 function renderAll() {
   settingsControls();
-  bannerControls();
+  bannersPanel();
   classworkPanel();
   assignmentPanel("homework", true);
   postListPanel("news", NEWS_CFG);

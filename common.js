@@ -9,7 +9,7 @@ function applyNames(name, welcome) {
 document.addEventListener("DOMContentLoaded", () => {
   if (document.body.classList.contains("portal")) return;
   applyNames(SITE.teacherName, SITE.welcome);
-  loadContent().then(c => applyNames(c.settings.teacherName, c.settings.welcome)).catch(() => {});
+  loadContent().then(c => { applyNames(c.settings.teacherName, c.settings.welcome); showBanners(c); }).catch(() => {});
 });
 
 // Loads classwork / homework / news / banner (managed in the Teacher Portal).
@@ -25,6 +25,23 @@ function loadContent() {
 }
 
 const CLASSWORK_SECTIONS = 7;
+const MAX_BANNERS = 3;
+const BANNER_PAGES = [
+  ["home", "Home page"], ["classwork", "Classwork"], ["homework", "Homework"],
+  ["news", "News"], ["programs", "Programs"], ["contact", "Contact"]
+];
+const BANNER_COLORS = {
+  yellow: { name: "Yellow", bg: "#fcd34d", border: "#eab308", text: "#3b2f05" },
+  gold:   { name: "Gold",   bg: "#e3c88f", border: "#b8955a", text: "#14213d" },
+  orange: { name: "Orange", bg: "#fed7aa", border: "#f97316", text: "#7c2d12" },
+  red:    { name: "Red",    bg: "#fecaca", border: "#ef4444", text: "#7f1d1d" },
+  pink:   { name: "Pink",   bg: "#fbcfe8", border: "#ec4899", text: "#831843" },
+  purple: { name: "Purple", bg: "#e9d5ff", border: "#a855f7", text: "#4c1d95" },
+  blue:   { name: "Blue",   bg: "#bfdbfe", border: "#3b82f6", text: "#1e3a8a" },
+  green:  { name: "Green",  bg: "#bbf7d0", border: "#22c55e", text: "#14532d" },
+  navy:   { name: "Navy",   bg: "#14213d", border: "#c9a96a", text: "#f3e6c4" },
+  white:  { name: "White",  bg: "#ffffff", border: "#c9a96a", text: "#14213d" }
+};
 
 // Fills in anything missing so older content.json files keep working.
 function normalizeContent(c) {
@@ -32,7 +49,19 @@ function normalizeContent(c) {
   c.settings = Object.assign({ newsNewDays: 7, teacherName: SITE.teacherName, welcome: SITE.welcome }, c.settings);
   if (!c.settings.teacherName) c.settings.teacherName = SITE.teacherName;
   if (!c.settings.welcome) c.settings.welcome = SITE.welcome;
-  c.noHomework = Object.assign({ on: false, message: "No homework tonight!" }, c.noHomework);
+  if (!Array.isArray(c.banners)) {
+    const nh = c.noHomework || {};
+    c.banners = [{ on: !!nh.on, message: nh.message || "No homework tonight!", emojiStart: "🎉", emojiEnd: "🥳", color: "yellow", pages: ["home", "homework"] }];
+  }
+  delete c.noHomework;
+  c.banners = c.banners.slice(0, MAX_BANNERS).map(b => ({
+    on: !!b.on,
+    message: b.message || "",
+    emojiStart: b.emojiStart == null ? "" : b.emojiStart,
+    emojiEnd: b.emojiEnd == null ? "" : b.emojiEnd,
+    color: b.color || "yellow",
+    pages: Array.isArray(b.pages) ? b.pages : ["home"]
+  }));
 
   // Classwork: a page heading + 7 named sections that can be switched on/off.
   let cw = c.classwork || {};
@@ -218,14 +247,41 @@ function fileBlock(file) {
   return card;
 }
 
-function noHomeworkBanner(content) {
-  if (!content.noHomework || !content.noHomework.on) return null;
-  const b = el("div", "nohw-banner");
-  b.setAttribute("role", "status");
-  b.appendChild(el("span", "nohw-emoji", "🎉"));
-  b.appendChild(el("span", null, content.noHomework.message || "No homework tonight!"));
-  b.appendChild(el("span", "nohw-emoji", "🥳"));
-  return b;
+// Colors for a banner: a named color above, or any custom "#rrggbb".
+function bannerColors(color) {
+  if (BANNER_COLORS[color]) return BANNER_COLORS[color];
+  const m = /^#([0-9a-f]{6})$/i.exec(color || "");
+  if (!m) return BANNER_COLORS.yellow;
+  const n = parseInt(m[1], 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  const dark = v => Math.round(v * 0.72).toString(16).padStart(2, "0");
+  return { bg: color, border: "#" + dark(r) + dark(g) + dark(b), text: lum > 0.6 ? "#1c2333" : "#ffffff" };
+}
+function makeBanner(b) {
+  const c = bannerColors(b.color);
+  const div = el("div", "nohw-banner");
+  div.setAttribute("role", "status");
+  div.style.setProperty("--b-bg", c.bg);
+  div.style.setProperty("--b-border", c.border);
+  div.style.setProperty("--b-text", c.text);
+  if (b.emojiStart) div.appendChild(el("span", "nohw-emoji", b.emojiStart));
+  div.appendChild(el("span", null, b.message));
+  if (b.emojiEnd) div.appendChild(el("span", "nohw-emoji", b.emojiEnd));
+  return div;
+}
+// Shows the banners that are switched on for this page (body data-page="…").
+function showBanners(c) {
+  const page = document.body.dataset.page;
+  if (!page) return;
+  const list = c.banners.filter(b => b.on && b.message.trim() && b.pages.includes(page));
+  if (!list.length) return;
+  let box = document.getElementById("banner");
+  if (!box) {
+    box = el("div", "page-banners");
+    const top = document.querySelector(".topbar");
+    if (top) top.after(box); else document.body.prepend(box);
+  }
+  list.forEach(b => box.appendChild(makeBanner(b)));
 }
 
 // Classwork & homework pages.
