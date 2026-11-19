@@ -4,10 +4,66 @@
     "message": "No homework tonight!"
   },
   "classwork": {
-    "title": "Today's Classwork",
-    "date": "2026-11-16",
-    "notes": "Complete both sections. Show your work!",
-    "files": []
+    "heading": "Classwork",
+    "intro": "",
+    "sections": [
+      {
+        "name": "גמרא",
+        "on": true,
+        "date": "2026-11-16",
+        "notes": "Complete both sections. Show your work!",
+        "files": [],
+        "id": "s1"
+      },
+      {
+        "name": "חומש",
+        "on": true,
+        "date": "",
+        "notes": "",
+        "files": [],
+        "id": "s2"
+      },
+      {
+        "name": "הלכה",
+        "on": true,
+        "date": "",
+        "notes": "",
+        "files": [],
+        "id": "s3"
+      },
+      {
+        "name": "Section 4",
+        "on": false,
+        "date": "",
+        "notes": "",
+        "files": [],
+        "id": "s4"
+      },
+      {
+        "name": "Section 5",
+        "on": false,
+        "date": "",
+        "notes": "",
+        "files": [],
+        "id": "s5"
+      },
+      {
+        "name": "Section 6",
+        "on": false,
+        "date": "",
+        "notes": "",
+        "files": [],
+        "id": "s6"
+      },
+      {
+        "name": "Section 7",
+        "on": false,
+        "date": "",
+        "notes": "",
+        "files": [],
+        "id": "s7"
+      }
+    ]
   },
   "homework": {
     "title": "Today's Homework",
@@ -36,5 +92,11 @@
       "text": "Please return signed permission slips by Friday.",
       "files": []
     }
-  ]
+  ],
+  "settings": {
+    "newsNewDays": 7,
+    "teacherName": "Rabbi Eisgrau",
+    "welcome": "Welcome to My Class"
+  },
+  "programs": []
 }
