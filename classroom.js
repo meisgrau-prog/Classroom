@@ -262,6 +262,29 @@
     return b;
   }
 
+  /* ---------- printing (one clean sheet, nothing else from the portal) ---------- */
+  const PRINT_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M6 14h12v7H6z"/></svg>';
+  function printBtn(label, onclick) {
+    return h("button", { type: "button", class: "button secondary", onclick }, h("span", { class: "cr-ico", html: PRINT_ICON }), label);
+  }
+  function printSheet(title, sub, body) {
+    const old = document.getElementById("print-area");
+    if (old) old.remove();
+    const when = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+    const area = h("div", { id: "print-area" },
+      h("h1", null, title),
+      h("p", { class: "print-sub" }, [when, sub].filter(Boolean).join(" · ")),
+      body);
+    document.body.appendChild(area);
+    document.body.classList.add("printing");
+    const done = () => { document.body.classList.remove("printing"); area.remove(); window.removeEventListener("afterprint", done); };
+    window.addEventListener("afterprint", done);
+    window.print();
+    setTimeout(() => { if (!matchMedia("print").matches) done(); }, 1000);
+  }
+  const printList = items => h("ol", { class: "print-list cols-" + (items.length <= 12 ? 1 : items.length <= 40 ? 2 : 3) },
+    items.map(x => h("li", null, String(x))));
+
   /* ---------- Students ---------- */
   function studentsView() {
     const msg = h("p", { class: "status" });
@@ -430,20 +453,9 @@
     function printGroups() {
       if (!last.length) make();
       if (!last.length) return;
-      const old = document.getElementById("print-area");
-      if (old) old.remove();
-      const when = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
-      const area = h("div", { id: "print-area" },
-        h("h1", null, "Groups"),
-        h("p", { class: "print-sub" }, when + " · " + summary.textContent),
+      printSheet("Groups", summary.textContent,
         h("div", { class: "print-groups" }, last.map((g, i) =>
           h("div", { class: "print-group" }, h("h2", null, `Group ${i + 1}`), h("ol", null, g.map(n => h("li", null, n)))))));
-      document.body.appendChild(area);
-      document.body.classList.add("printing");
-      const done = () => { document.body.classList.remove("printing"); area.remove(); window.removeEventListener("afterprint", done); };
-      window.addEventListener("afterprint", done);
-      window.print();
-      setTimeout(() => { if (!matchMedia("print").matches) done(); }, 1000);
     }
     const el = h("div", { class: "cr-view hidden" },
       h("div", { class: "card" },
@@ -454,8 +466,7 @@
           h("button", { type: "button", class: "button", onclick: make }, "Make groups"),
           h("button", { type: "button", class: "button secondary", onclick: make }, "Shuffle again"),
           copyBtn(() => last.map((g, i) => `Group ${i + 1}: ${g.join(", ")}`).join("\n")),
-          h("button", { type: "button", class: "button secondary", onclick: printGroups },
-            h("span", { class: "cr-ico", html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M6 14h12v7H6z"/></svg>' }), "Print groups"),
+          printBtn("Print groups", printGroups),
           fullscreenBtn(stage)),
         summary),
       stage);
@@ -474,7 +485,7 @@
     const note = h("p", { class: "help", style: "text-align:center" });
     const hist = h("div", { class: "cr-picks" });
     const stage = h("div", { class: "cr-stage cr-center" }, pickNo, big, note, hist);
-    let used = [], history = [], rolling = false;
+    let used = [], history = [], rolling = false, lastRange = "";
     function drawHistory() {
       hist.innerHTML = "";
       pickNo.textContent = history.length ? "Pick #" + history.length : "";
@@ -497,6 +508,7 @@
       if (lo > hi) [lo, hi] = [hi, lo];
       if (lo < 0 || hi > MAXN) { note.textContent = "Please choose numbers from 0 up to 10,000."; return; }
       const size = hi - lo + 1;
+      lastRange = `${lo}–${hi}` + (noRepeat.checked ? ", no repeats" : "");
       let value;
       if (noRepeat.checked) {
         if (used.length >= size) used = [];
@@ -532,6 +544,10 @@
         h("div", { class: "actions", style: "justify-content:center" },
           h("button", { type: "button", class: "button cr-go", onclick: pick }, "Pick a number"),
           h("button", { type: "button", class: "button secondary", onclick: () => { used = []; history = []; drawHistory(); big.textContent = "?"; note.textContent = ""; } }, "Reset"),
+          printBtn("Print picks", () => {
+            if (!history.length) { note.textContent = "Pick a number first, then print."; return; }
+            printSheet("Random Numbers", `${history.length} pick${history.length === 1 ? "" : "s"} · range ${lastRange}`, printList(history));
+          }),
           fullscreenBtn(stage))));
     mark();
     return { el };
@@ -539,17 +555,29 @@
 
   /* ---------- Random Student ---------- */
   function pickerView() {
+    const pickNo = h("div", { class: "cr-pickno" });
     const big = h("div", { class: "cr-big cr-name" }, "?");
     const note = h("p", { class: "help", style: "text-align:center" });
-    const stage = h("div", { class: "cr-stage cr-center" }, big, note);
+    const hist = h("div", { class: "cr-picks" });
+    const stage = h("div", { class: "cr-stage cr-center" }, pickNo, big, note, hist);
     const fair = h("input", { type: "checkbox", checked: true });
     const orderOut = h("ol", { class: "cr-order" });
-    let picked = [], rolling = false, order = [];
+    let picked = [], log = [], rolling = false, order = [];
+    function drawLog() {
+      hist.innerHTML = "";
+      pickNo.textContent = log.length ? "Pick #" + log.length : "";
+      const earlier = log.slice(0, -1);
+      if (!earlier.length) return;
+      hist.appendChild(h("div", { class: "cr-picks-title" }, "Earlier picks"));
+      const list = h("ol", { class: "cr-picks-list" });
+      earlier.forEach((n, i) => list.appendChild(h("li", null, h("span", { class: "n" }, (i + 1) + "."), " ", h("strong", null, n))));
+      hist.appendChild(list);
+    }
     function pick() {
       const kids = present();
       if (!kids.length) return needStudents(stage), null;
       if (rolling) return;
-      if (!stage.contains(big)) { stage.innerHTML = ""; stage.append(big, note); }
+      if (!stage.contains(big)) { stage.innerHTML = ""; stage.append(pickNo, big, note, hist); }
       let pool = fair.checked ? kids.filter(n => !picked.includes(n)) : kids;
       if (!pool.length) { picked = []; pool = kids; }
       const name = pool[randInt(pool.length)];
@@ -562,6 +590,8 @@
           clearInterval(timer);
           big.textContent = name; big.classList.remove("pop"); void big.offsetWidth; big.classList.add("pop");
           rolling = false;
+          log.push(name);
+          drawLog();
           const left = kids.filter(n => !picked.includes(n)).length;
           note.textContent = fair.checked ? (left ? `${left} student${left === 1 ? "" : "s"} still to be picked.` : "Everyone has had a turn — the next pick starts a new round.") : "";
         }
@@ -582,7 +612,11 @@
         stage,
         h("div", { class: "actions", style: "justify-content:center" },
           h("button", { type: "button", class: "button cr-go", onclick: pick }, "Pick a student"),
-          h("button", { type: "button", class: "button secondary", onclick: () => { picked = []; big.textContent = "?"; note.textContent = "Starting fresh — everyone can be picked."; } }, "Start over"),
+          h("button", { type: "button", class: "button secondary", onclick: () => { picked = []; log = []; drawLog(); big.textContent = "?"; note.textContent = "Starting fresh — everyone can be picked."; } }, "Start over"),
+          printBtn("Print picks", () => {
+            if (!log.length) { note.textContent = "Pick a student first, then print."; return; }
+            printSheet("Students Picked", `${log.length} pick${log.length === 1 ? "" : "s"}, in the order they were picked`, printList(log));
+          }),
           fullscreenBtn(stage))),
       h("div", { class: "card" },
         h("h2", { class: "section-title" }, "Randomize the Order"),
@@ -590,6 +624,11 @@
         h("div", { class: "actions" },
           h("button", { type: "button", class: "button", onclick: shuffleOrder }, "Shuffle the order"),
           copyBtn(() => order.map((n, i) => `${i + 1}. ${n}`).join("\n")),
+          printBtn("Print order", () => {
+            if (!order.length) shuffleOrder();
+            if (!order.length) return;
+            printSheet("Student Order", `${order.length} students in random order`, printList(order));
+          }),
           fullscreenBtn(orderStage)),
         orderStage));
     return { el, refresh: () => { picked = picked.filter(n => present().includes(n)); } };

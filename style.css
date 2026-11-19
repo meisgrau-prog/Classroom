@@ -1038,3 +1038,10 @@ html.gate-wait body > :not(.site-gate) { visibility: hidden; }
   #print-area .print-group li { padding: 1.5pt 0; }
   @page { margin: 14mm; }
 }
+@media print {
+  #print-area .print-list { column-gap: 30pt; margin: 0; padding-left: 26pt; font-size: 13pt; }
+  #print-area .print-list.cols-1 { columns: 1; font-size: 16pt; }
+  #print-area .print-list.cols-2 { columns: 2; }
+  #print-area .print-list.cols-3 { columns: 3; }
+  #print-area .print-list li { padding: 3pt 0; break-inside: avoid; }
+}
