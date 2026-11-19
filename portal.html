@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
   <title>Teacher Portal – Rabbi Eisgrau</title>
-  <link rel="stylesheet" href="style.css?v=20261120">
-  <script src="data.js?v=20261120"></script>
-  <script src="common.js?v=20261120"></script>
+  <link rel="stylesheet" href="style.css?v=20261121">
+  <script src="data.js?v=20261121"></script>
+  <script src="common.js?v=20261121"></script>
 </head>
 <body class="portal">
   <header class="topbar">
@@ -128,6 +128,35 @@
           </div>
         </div>
         <p class="help" style="margin:0">The teacher name appears on the home page and at the top of every page.</p>
+
+        <div class="lock-box">
+          <div class="switch-row">
+            <div>
+              <h3 class="section-title" style="font-size:1.3rem">Lock the Website with a Password</h3>
+              <p class="help" style="margin:0">When on, visitors must type this password to see any page.</p>
+            </div>
+            <div class="row">
+              <span class="switch-state" id="lock-state">Off</span>
+              <label class="switch" aria-label="Website lock on or off">
+                <input type="checkbox" id="lock-on">
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="two" style="margin-top:14px">
+            <div class="field">
+              <label for="lock-pass">Website password</label>
+              <input type="password" id="lock-pass" autocomplete="new-password" placeholder="Type a new password">
+            </div>
+            <div class="field">
+              <label for="lock-pass2">Type it again</label>
+              <input type="password" id="lock-pass2" autocomplete="new-password">
+            </div>
+          </div>
+          <button class="small-btn" id="lock-set" type="button">Set website password</button>
+          <p class="status" id="lock-msg"></p>
+          <p class="help">This is a privacy screen for families and students. Because the website is stored on public GitHub, a technical person could still find posted files there, so don't post anything truly confidential. Use a different password from the Teacher Portal password.</p>
+        </div>
       </div>
 
 
@@ -158,6 +187,6 @@
     <button class="button" id="save-btn" type="button">Save &amp; Publish</button>
   </div>
 
-  <script src="portal.js?v=20261120b"></script>
+  <script src="portal.js?v=20261121"></script>
 </body>
 </html>

@@ -14,9 +14,9 @@
 Click the small 🔒 at the bottom of the home page (or open /portal.html).
 
 Sign in with the **portal password**. (Backup: "Sign in with GitHub key instead".)
-- **Site Settings:** teacher name and welcome message.
+- **Site Settings:** teacher name, welcome message, and the website lock (password + on/off switch).
 - **Banners (up to 3):** words, color, emojis, which pages they show on, and on/off.
-- **Classwork / Homework / News / Programs** tabs: change text and upload documents.
+- **Classwork / Homework / News / Programs / Banners** tabs: change text and upload documents. News items can be marked **Urgent**.
 - Click **Save & Publish**. The website updates in 1–2 minutes.
 
 ### First-time setup (or forgot the password / GitHub key expired)

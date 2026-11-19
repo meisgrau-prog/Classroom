@@ -6,11 +6,72 @@ function applyNames(name, welcome) {
   document.querySelectorAll("[data-welcome]").forEach(el => { el.textContent = welcome; });
   document.title = document.title.replace(/Rabbi Eisgrau|\u2013 .*$/, m => m.startsWith("\u2013") ? "\u2013 " + name : name);
 }
+// Pages stay hidden until we know whether the site is locked (see showSiteGate).
+const IS_PORTAL = /portal\.html$/.test(location.pathname);
+if (!IS_PORTAL) document.documentElement.classList.add("gate-wait");
+
 document.addEventListener("DOMContentLoaded", () => {
-  if (document.body.classList.contains("portal")) return;
+  if (IS_PORTAL) return;
   applyNames(SITE.teacherName, SITE.welcome);
-  loadContent().then(c => { applyNames(c.settings.teacherName, c.settings.welcome); showBanners(c); }).catch(() => {});
+  loadContent().then(async c => {
+    applyNames(c.settings.teacherName, c.settings.welcome);
+    showBanners(c);
+    await checkSiteLock(c);
+  }).catch(() => document.documentElement.classList.remove("gate-wait"));
 });
+
+/* ---------------- Site lock (turned on/off in the Teacher Portal) ----------------
+   A privacy screen: visitors must type the class password to see the pages. */
+const UNLOCK_KEY = "classroom_site_unlocked";
+function b64(buf) { let s = ""; new Uint8Array(buf).forEach(x => s += String.fromCharCode(x)); return btoa(s); }
+async function hashSitePassword(password, saltB64, iterations) {
+  const salt = Uint8Array.from(atob(saltB64), ch => ch.charCodeAt(0));
+  const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]);
+  return b64(await crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations, hash: "SHA-256" }, base, 256));
+}
+function readUnlock() {
+  try { return localStorage.getItem(UNLOCK_KEY) || sessionStorage.getItem(UNLOCK_KEY); } catch { return null; }
+}
+async function checkSiteLock(c) {
+  const lock = c.settings.siteLock;
+  const reveal = () => document.documentElement.classList.remove("gate-wait");
+  if (!lock || !lock.on || !lock.hash) return reveal();
+  if (readUnlock() === lock.hash) return reveal();
+  showSiteGate(c, lock, reveal);
+}
+function showSiteGate(c, lock, reveal) {
+  const gate = el("div", "site-gate");
+  gate.setAttribute("role", "dialog");
+  gate.setAttribute("aria-modal", "true");
+  const box = el("form", "gate-box");
+  box.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+  box.appendChild(el("h1", "gate-title", c.settings.teacherName));
+  box.appendChild(el("p", "gate-sub", "This class website is private. Please enter the password."));
+  const input = el("input"); input.type = "password"; input.placeholder = "Password"; input.autocomplete = "current-password";
+  input.setAttribute("aria-label", "Password");
+  const remLab = el("label", "gate-remember");
+  const rem = el("input"); rem.type = "checkbox";
+  remLab.append(rem, document.createTextNode(" Remember this device"));
+  const btn = el("button", "gate-btn", "Enter"); btn.type = "submit";
+  const msg = el("p", "gate-msg");
+  box.append(input, remLab, btn, msg);
+  gate.appendChild(box);
+  document.body.appendChild(gate);
+  input.focus();
+  box.addEventListener("submit", async e => {
+    e.preventDefault();
+    msg.textContent = "";
+    if (!(window.crypto && crypto.subtle)) { msg.textContent = "Please open this site with https:// at the start of the address."; return; }
+    btn.disabled = true; btn.textContent = "Checking…";
+    try {
+      const h = await hashSitePassword(input.value, lock.salt, lock.iterations);
+      if (h !== lock.hash) { msg.textContent = "That password isn't right. Please try again."; input.select(); return; }
+      try { (rem.checked ? localStorage : sessionStorage).setItem(UNLOCK_KEY, h); } catch {}
+      gate.remove();
+      reveal();
+    } finally { btn.disabled = false; btn.textContent = "Enter"; }
+  });
+}
 
 // Loads classwork / homework / news / banner (managed in the Teacher Portal).
 let contentPromise = null;
@@ -47,6 +108,7 @@ const BANNER_COLORS = {
 function normalizeContent(c) {
   c = c || {};
   c.settings = Object.assign({ newsNewDays: 7, teacherName: SITE.teacherName, welcome: SITE.welcome }, c.settings);
+  c.settings.siteLock = Object.assign({ on: false, hash: "", salt: "", iterations: 150000 }, c.settings.siteLock);
   if (!c.settings.teacherName) c.settings.teacherName = SITE.teacherName;
   if (!c.settings.welcome) c.settings.welcome = SITE.welcome;
   if (!Array.isArray(c.banners)) {
@@ -134,10 +196,11 @@ function renderPosts(items, container, opts) {
     return;
   }
   items.forEach(item => {
-    const post = el("details", "card post");
+    const post = el("details", "card post" + (item.urgent ? " urgent" : ""));
     const head = el("summary", "post-head");
     const text = el("div", "post-titles");
     const h = el("h2", "post-title", item.title || "");
+    if (item.urgent) h.prepend(el("span", "urgent-tag", "Urgent"));
     if (opts.isNew && opts.isNew(item)) h.appendChild(el("span", "new-tag", "New"));
     text.appendChild(h);
     if (item.subtitle) text.appendChild(el("p", "post-subtitle", item.subtitle));

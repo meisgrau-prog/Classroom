@@ -571,6 +571,13 @@ const NEWS_CFG = {
     return c;
   },
   fields: (card, item) => {
+    const ul = el("label", "check-line");
+    const uc = el("input"); uc.type = "checkbox"; uc.checked = !!item.urgent;
+    card.classList.toggle("is-urgent", !!item.urgent);
+    uc.addEventListener("change", () => { item.urgent = uc.checked; card.classList.toggle("is-urgent", uc.checked); changed(); });
+    ul.append(uc, document.createTextNode(" Mark as URGENT (red border and “Urgent” label on the site)"));
+    const uf = el("div", "field"); uf.appendChild(ul);
+    card.appendChild(uf);
     card.appendChild(field("Headline", textInput(item, "title", "e.g. Field trip on Friday")));
     card.appendChild(field("Subtitle (short line shown under the headline)", textInput(item, "subtitle", "e.g. Permission slips due Wednesday")));
     card.appendChild(dateField("Date", item, "date"));
@@ -731,6 +738,37 @@ function bannersPanel() {
   }
 }
 
+function lockControls() {
+  const lock = content.settings.siteLock;
+  const on = $("lock-on"), state = $("lock-state"), msg = $("lock-msg");
+  const status = () => {
+    state.textContent = lock.on ? "On" : "Off";
+    msg.className = "status" + (lock.on && !lock.hash ? " err" : "");
+    msg.textContent = lock.on && !lock.hash ? "Set a password below before saving."
+      : lock.on ? "The website is locked. Visitors need the password."
+      : lock.hash ? "The website is open to everyone. (A password is saved for when you turn the lock on.)"
+      : "The website is open to everyone.";
+  };
+  on.checked = !!lock.on;
+  on.onchange = () => { lock.on = on.checked; changed(); status(); };
+  $("lock-set").onclick = async () => {
+    const p1 = $("lock-pass").value, p2 = $("lock-pass2").value;
+    msg.className = "status err";
+    if (p1.length < 4) { msg.textContent = "Please use at least 4 characters."; return; }
+    if (p1 !== p2) { msg.textContent = "The two passwords don't match."; return; }
+    if (!cryptoAvailable()) { msg.textContent = HTTPS_MSG; return; }
+    const salt = b64(crypto.getRandomValues(new Uint8Array(16)));
+    lock.salt = salt;
+    lock.iterations = 150000;
+    lock.hash = await hashSitePassword(p1, salt, lock.iterations);
+    $("lock-pass").value = $("lock-pass2").value = "";
+    changed(); status();
+    msg.className = "status ok";
+    msg.textContent = "✓ Website password set. Click Save & Publish to apply it.";
+  };
+  status();
+}
+
 function settingsControls() {
   const name = $("set-name"), welcome = $("set-welcome");
   name.value = content.settings.teacherName || "";
@@ -741,6 +779,7 @@ function settingsControls() {
 
 function renderAll() {
   settingsControls();
+  lockControls();
   bannersPanel();
   classworkPanel();
   assignmentPanel("homework", true);
@@ -769,6 +808,12 @@ function allFileLists() {
 
 $("save-btn").addEventListener("click", async () => {
   const btn = $("save-btn"), msg = $("save-msg");
+  if (content.settings.siteLock.on && !content.settings.siteLock.hash) {
+    msg.className = "msg err";
+    msg.textContent = "Set a website password (Site Settings) or turn the lock off before saving.";
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    return;
+  }
   btn.disabled = true;
   msg.className = "msg";
   try {

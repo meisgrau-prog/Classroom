@@ -846,3 +846,68 @@ details summary { cursor: pointer; font-weight: 600; color: var(--navy); }
   border: 1px solid var(--border); border-radius: 999px; color: var(--navy); background: #fff;
 }
 .portal .emoji-picks button[aria-pressed=true] { background: #f3ead9; border-color: var(--gold); box-shadow: 0 0 0 2px rgba(184,149,90,.35); }
+
+/* ================= Site lock screen ================= */
+html.gate-wait body > :not(.site-gate) { visibility: hidden; }
+.site-gate {
+  position: fixed; inset: 0; z-index: 1000;
+  display: grid; place-items: center;
+  padding: 20px;
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 0%, rgba(201,169,106,.14), transparent 70%),
+    linear-gradient(170deg, #0f1830 0%, #18264a 100%);
+}
+.gate-box {
+  width: 100%; max-width: 380px;
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+  padding: 34px 28px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(201,169,106,.6);
+  border-radius: 18px;
+  text-align: center;
+  color: #fff;
+  box-shadow: 0 20px 50px rgba(0,0,0,.35);
+}
+.gate-box svg { width: 40px; height: 40px; color: var(--gold-soft); }
+.gate-title { font-family: var(--serif); font-weight: 500; font-size: 2rem; margin: 0; letter-spacing: .5px; }
+.gate-sub { margin: 0 0 6px; color: #d8cfbd; font-size: .95rem; }
+.gate-box input[type=password] {
+  width: 100%; padding: 13px 16px; font: inherit; font-size: 1.05rem;
+  border-radius: 10px; border: 1px solid rgba(201,169,106,.6);
+  background: rgba(255,255,255,.95); color: var(--text);
+}
+.gate-box input[type=password]:focus { outline: 3px solid rgba(201,169,106,.45); }
+.gate-remember { display: flex; align-items: center; gap: 8px; font-size: .9rem; color: #d8cfbd; align-self: flex-start; }
+.gate-btn {
+  width: 100%; padding: 13px; border: 0; border-radius: 999px;
+  background: linear-gradient(180deg, #d4b375 0%, var(--gold) 100%);
+  color: var(--navy); font: 700 1rem var(--sans); letter-spacing: 2px; text-transform: uppercase; cursor: pointer;
+}
+.gate-btn:disabled { opacity: .7; cursor: wait; }
+.gate-msg { margin: 0; min-height: 1.2em; color: #fca5a5; font-size: .92rem; }
+
+/* ================= Urgent news ================= */
+.post.urgent { border: 2px solid #b3261e; border-left-width: 6px; }
+.post.urgent .post-head { background: #fff5f5; }
+.post.urgent .post-head:hover { background: #ffecec; }
+.urgent-tag {
+  display: inline-block;
+  margin-right: 10px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  background: #b3261e;
+  color: #fff;
+  font-family: var(--sans);
+  font-size: .72rem;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+/* Portal: site lock + urgent controls */
+.portal .lock-box { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--border); }
+.portal .check-line { display: flex !important; align-items: center; gap: 8px; font-weight: 600 !important; }
+.portal .news-item.is-urgent { border: 2px solid #b3261e; }
+.gate-box .gate-remember input { width: auto; padding: 0; margin: 0; }
+.gate-box .gate-remember { margin: 0; font-weight: 400; }
