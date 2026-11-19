@@ -10,7 +10,125 @@ document.addEventListener("DOMContentLoaded", () => {
 async function loadContent() {
   const res = await fetch("content.json?t=" + Date.now(), { cache: "no-store" });
   if (!res.ok) throw new Error("Could not load content.json");
-  return res.json();
+  return normalizeContent(await res.json());
+}
+
+const CLASSWORK_SECTIONS = 7;
+
+// Fills in anything missing so older content.json files keep working.
+function normalizeContent(c) {
+  c = c || {};
+  c.settings = Object.assign({ newsNewDays: 7 }, c.settings);
+  c.noHomework = Object.assign({ on: false, message: "No homework tonight!" }, c.noHomework);
+
+  // Classwork: a page heading + 7 named sections that can be switched on/off.
+  let cw = c.classwork || {};
+  if (!Array.isArray(cw.sections)) {
+    const old = cw;
+    cw = { heading: "Classwork", intro: "", sections: [] };
+    if (old.date || old.notes || (old.files && old.files.length)) {
+      cw.sections.push({ name: "Section 1", on: true, date: old.date || "", notes: old.notes || "", files: old.files || [] });
+    }
+  }
+  cw.heading = cw.heading || "Classwork";
+  cw.intro = cw.intro || "";
+  for (let i = cw.sections.length; i < CLASSWORK_SECTIONS; i++) {
+    cw.sections.push({ name: "Section " + (i + 1), on: true, date: "", notes: "", files: [] });
+  }
+  cw.sections = cw.sections.slice(0, CLASSWORK_SECTIONS);
+  cw.sections.forEach((sec, i) => {
+    sec.id = "s" + (i + 1);
+    sec.name = sec.name || "Section " + (i + 1);
+    sec.on = sec.on !== false;
+    sec.date = sec.date || "";
+    sec.notes = sec.notes || "";
+    sec.files = sec.files || [];
+  });
+  c.classwork = cw;
+
+  c.homework = Object.assign({ title: "Today's Homework", date: "", due: "", notes: "", files: [] }, c.homework);
+  const lists = ["news", "programs"];
+  lists.forEach(k => {
+    c[k] = Array.isArray(c[k]) ? c[k] : [];
+    c[k].forEach(n => { n.files = n.files || []; n.id = n.id || k[0] + Math.random().toString(36).slice(2, 8); });
+  });
+  return c;
+}
+
+// Days between a "YYYY-MM-DD" date and today (0 = today, positive = in the past).
+function daysAgo(value) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value || "");
+  if (!m) return null;
+  const d = new Date(+m[1], +m[2] - 1, +m[3]);
+  const t = new Date(); t.setHours(0, 0, 0, 0);
+  return Math.round((t - d) / 86400000);
+}
+function isNewNews(item, days) {
+  if (!days) return false;
+  const a = daysAgo(item.date);
+  return a !== null && a < days;
+}
+function newNewsCount(c) {
+  return (c.news || []).filter(n => isNewNews(n, c.settings.newsNewDays)).length;
+}
+
+// "Nov 3 – Dec 15, 2026" style range for programs.
+function formatRange(start, end) {
+  const short = v => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v || "");
+    return m ? new Date(+m[1], +m[2] - 1, +m[3]).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : (v || "");
+  };
+  if (start && end) return short(start) + " – " + short(end);
+  if (start) return "Starting " + short(start);
+  if (end) return "Until " + short(end);
+  return "";
+}
+
+// List of posts (news, programs): each shows a heading + subtitle and opens on click.
+function renderPosts(items, container, opts) {
+  opts = opts || {};
+  if (!items.length) {
+    container.appendChild(el("div", "card empty", opts.empty || "Nothing posted yet. Please check back soon."));
+    return;
+  }
+  items.forEach(item => {
+    const post = el("details", "card post");
+    const head = el("summary", "post-head");
+    const text = el("div", "post-titles");
+    const h = el("h2", "post-title", item.title || "");
+    if (opts.isNew && opts.isNew(item)) h.appendChild(el("span", "new-tag", "New"));
+    text.appendChild(h);
+    if (item.subtitle) text.appendChild(el("p", "post-subtitle", item.subtitle));
+    const when = opts.dateLine ? opts.dateLine(item) : formatDate(item.date);
+    if (when) text.appendChild(el("p", "post-date", when));
+    head.appendChild(text);
+    head.appendChild(el("span", "post-toggle", ""));
+    post.appendChild(head);
+
+    const body = el("div", "post-body");
+    if (item.text) body.appendChild(el("p", "news-text", item.text));
+    (item.files || []).forEach(f => {
+      if (fileKind(f.path) === "image") {
+        const img = el("img", "post-image");
+        img.src = f.path; img.alt = f.name; img.loading = "lazy";
+        body.appendChild(img);
+      }
+    });
+    (item.files || []).forEach(f => {
+      const row = el("div", "attachment");
+      row.innerHTML = ICON_FILE;
+      row.appendChild(el("span", "attachment-name", f.name));
+      const view = el("a", "link", "View");
+      view.href = f.path; view.target = "_blank"; view.rel = "noopener";
+      const dl = el("a", "link", "Download");
+      dl.href = f.path; dl.setAttribute("download", f.name);
+      row.append(view, dl);
+      body.appendChild(row);
+    });
+    if (!body.childNodes.length) body.appendChild(el("p", "help", "No further details."));
+    post.appendChild(body);
+    container.appendChild(post);
+  });
 }
 
 // "2026-11-16" -> "Monday, November 16, 2026"

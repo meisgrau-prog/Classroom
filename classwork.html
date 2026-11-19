@@ -3,21 +3,59 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Today's Classwork – Rabbi Eisgrau</title>
-  <link rel="stylesheet" href="style.css?v=20261117">
-  <script src="data.js?v=20261117"></script>
-  <script src="common.js?v=20261117"></script>
+  <title>Classwork – Rabbi Eisgrau</title>
+  <link rel="stylesheet" href="style.css?v=20261119">
+  <script src="data.js?v=20261119"></script>
+  <script src="common.js?v=20261119"></script>
 </head>
 <body>
   <header class="topbar">
     <a class="home-btn" href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>Home</a>
     <span class="brand" data-teacher>Rabbi Eisgrau</span>
   </header>
-  <main id="content"></main>
+  <div class="cw-layout">
+    <nav class="cw-menu" id="cw-menu" aria-label="Classwork sections"></nav>
+    <main class="cw-main" id="cw-main"></main>
+  </div>
   <script>
-    const main = document.getElementById("content");
+    const menu = document.getElementById("cw-menu");
+    const main = document.getElementById("cw-main");
+    let data = null;
+
+    function show() {
+      const id = location.hash.slice(1);
+      const sections = data.sections.filter(s => s.on);
+      const sec = sections.find(s => s.id === id);
+      menu.querySelectorAll("a").forEach(a => a.classList.toggle("active", a.dataset.id === (sec ? sec.id : "")));
+      main.innerHTML = "";
+
+      if (!sec) {                                   // Classwork home
+        const card = el("div", "card cw-home");
+        card.appendChild(el("h1", "page-title", data.heading));
+        card.appendChild(el("hr", "rule"));
+        if (data.intro) card.appendChild(el("p", "notes", data.intro));
+        card.appendChild(el("p", "date", sections.length ? "Choose a section from the menu." : "Nothing has been posted yet. Please check back later."));
+        main.appendChild(card);
+        return;
+      }
+      const info = { title: sec.name, date: sec.date, notes: sec.notes, files: sec.files };
+      renderAssignment(info, main);
+      window.scrollTo({ top: 0 });
+    }
+
     loadContent().then(c => {
-      renderAssignment(c.classwork, main);
+      data = c.classwork;
+      document.title = data.heading + " – " + SITE.teacherName;
+      const home = el("a", "cw-menu-title", data.heading);
+      home.href = "#"; home.dataset.id = "";
+      menu.appendChild(home);
+      data.sections.filter(s => s.on).forEach(s => {
+        const a = el("a", "cw-item", s.name);
+        a.href = "#" + s.id; a.dataset.id = s.id;
+        menu.appendChild(a);
+      });
+      window.addEventListener("hashchange", show);
+      show();
     }).catch(() => showLoadError(main));
   </script>
 </body>

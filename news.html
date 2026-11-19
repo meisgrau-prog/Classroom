@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>News – Rabbi Eisgrau</title>
-  <link rel="stylesheet" href="style.css?v=20261117">
-  <script src="data.js?v=20261117"></script>
-  <script src="common.js?v=20261117"></script>
+  <link rel="stylesheet" href="style.css?v=20261119">
+  <script src="data.js?v=20261119"></script>
+  <script src="common.js?v=20261119"></script>
 </head>
 <body>
   <header class="topbar">
@@ -21,28 +21,9 @@
   <script>
     const list = document.getElementById("news");
     loadContent().then(c => {
-      const items = c.news || [];
-      if (items.length === 0) {
-        list.innerHTML = '<div class="card empty">No news yet. Please check back soon.</div>';
-        return;
-      }
-      items.forEach(item => {
-        const card = el("article", "card news-item");
-        card.appendChild(el("h2", null, item.title));
-        if (item.date) card.appendChild(el("p", "date", formatDate(item.date)));
-        if (item.text) card.appendChild(el("p", "news-text", item.text));
-        (item.files || []).forEach(f => {
-          const row = el("div", "attachment");
-          row.innerHTML = ICON_FILE;
-          row.appendChild(el("span", "attachment-name", f.name));
-          const view = el("a", "link", "View");
-          view.href = f.path; view.target = "_blank"; view.rel = "noopener";
-          const dl = el("a", "link", "Download");
-          dl.href = f.path; dl.setAttribute("download", f.name);
-          row.append(view, dl);
-          card.appendChild(row);
-        });
-        list.appendChild(card);
+      renderPosts(c.news, list, {
+        empty: "No news yet. Please check back soon.",
+        isNew: item => isNewNews(item, c.settings.newsNewDays)
       });
     }).catch(() => showLoadError(list));
   </script>

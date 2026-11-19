@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Welcome – Rabbi Eisgrau</title>
-  <link rel="stylesheet" href="style.css?v=20261117">
-  <script src="data.js?v=20261117"></script>
-  <script src="common.js?v=20261117"></script>
+  <link rel="stylesheet" href="style.css?v=20261119">
+  <script src="data.js?v=20261119"></script>
+  <script src="common.js?v=20261119"></script>
 </head>
 <body class="landing-body">
   <div class="home">
@@ -117,14 +117,22 @@
           </svg></span>
           <span>Homework</span>
         </a>
-        <a class="side-btn" href="news.html">
-          <span class="badge"><svg viewBox="0 0 64 64" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <a class="side-btn" href="news.html" id="news-btn">
+          <span class="badge"><span class="count hidden" id="news-count"></span><svg viewBox="0 0 64 64" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M14 12h38v38a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4V24h6"/>
             <path d="M14 12v38a4 4 0 0 1-4 4"/>
             <rect x="21" y="20" width="12" height="10"/>
             <path class="accent" d="M38 21h8M38 28h8M21 37h25M21 44h25"/>
           </svg></span>
           <span>News</span>
+        </a>
+        <a class="side-btn" href="programs.html">
+          <span class="badge"><svg viewBox="0 0 64 64" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="8" y="12" width="48" height="44" rx="4"/>
+            <path d="M8 24h48M20 6v12M44 6v12"/>
+            <path class="accent" d="M32 30l3.5 7 7.5 1-5.5 5 1.5 7.5L32 47l-6.5 3.5L27 43l-5.5-5 7.5-1z"/>
+          </svg></span>
+          <span>Programs</span>
         </a>
       </nav>
     </div>
@@ -144,6 +152,13 @@
     loadContent().then(c => {
       const b = noHomeworkBanner(c);
       if (b) document.getElementById("banner").appendChild(b);
+      const n = newNewsCount(c);
+      if (n > 0) {
+        const count = document.getElementById("news-count");
+        count.textContent = n > 9 ? "9+" : String(n);
+        count.classList.remove("hidden");
+        document.getElementById("news-btn").setAttribute("aria-label", `News (${n} new)`);
+      }
     }).catch(() => {});
   </script>
 </body>

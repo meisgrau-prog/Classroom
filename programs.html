@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Programs – Rabbi Eisgrau</title>
+  <link rel="stylesheet" href="style.css?v=20261119">
+  <script src="data.js?v=20261119"></script>
+  <script src="common.js?v=20261119"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="home-btn" href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>Home</a>
+    <span class="brand" data-teacher>Rabbi Eisgrau</span>
+  </header>
+  <main>
+    <h1 class="page-title">Programs</h1>
+    <p class="date" style="margin:0">What's happening in our class right now</p>
+    <hr class="rule">
+    <div id="programs"></div>
+  </main>
+  <script>
+    const list = document.getElementById("programs");
+    loadContent().then(c => {
+      renderPosts(c.programs, list, {
+        empty: "No programs are running right now. Please check back soon.",
+        dateLine: item => formatRange(item.start, item.end)
+      });
+    }).catch(() => showLoadError(list));
+  </script>
+</body>
+</html>
