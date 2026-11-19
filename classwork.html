@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Classwork – Rabbi Eisgrau</title>
-  <link rel="stylesheet" href="style.css?v=20261119">
-  <script src="data.js?v=20261119"></script>
-  <script src="common.js?v=20261119"></script>
+  <link rel="stylesheet" href="style.css?v=20261119b">
+  <script src="data.js?v=20261119b"></script>
+  <script src="common.js?v=20261119b"></script>
 </head>
 <body>
   <header class="topbar">
@@ -26,7 +26,11 @@
       const id = location.hash.slice(1);
       const sections = data.sections.filter(s => s.on);
       const sec = sections.find(s => s.id === id);
-      menu.querySelectorAll("a").forEach(a => a.classList.toggle("active", a.dataset.id === (sec ? sec.id : "")));
+      menu.querySelectorAll("a").forEach(a => {
+        const on = a.dataset.id === (sec ? sec.id : "");
+        a.classList.toggle("active", on);
+        if (on && matchMedia("(max-width: 760px)").matches) a.scrollIntoView({ inline: "center", block: "nearest" });
+      });
       main.innerHTML = "";
 
       if (!sec) {                                   // Classwork home
@@ -40,7 +44,7 @@
       }
       const info = { title: sec.name, date: sec.date, notes: sec.notes, files: sec.files };
       renderAssignment(info, main);
-      window.scrollTo({ top: 0 });
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
     loadContent().then(c => {

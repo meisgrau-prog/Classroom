@@ -5,53 +5,131 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
   <title>Teacher Portal – Rabbi Eisgrau</title>
-  <link rel="stylesheet" href="style.css?v=20261119">
-  <script src="data.js?v=20261119"></script>
-  <script src="common.js?v=20261119"></script>
+  <link rel="stylesheet" href="style.css?v=20261119b">
+  <script src="data.js?v=20261119b"></script>
+  <script src="common.js?v=20261119b"></script>
 </head>
 <body class="portal">
   <header class="topbar">
     <span class="brand">Teacher Portal</span>
     <div class="top-actions">
       <a class="back" href="index.html" target="_blank" rel="noopener">View site ↗</a>
+      <button class="back hidden" id="changepw-open" type="button">Change password</button>
       <button class="back hidden" id="signout" type="button">Sign out</button>
     </div>
   </header>
 
   <main>
-    <!-- ================= SIGN IN (GitHub key) ================= -->
+    <!-- ================= SIGN IN (password) ================= -->
     <section id="signin" class="card">
       <h1 class="page-title">Teacher Portal</h1>
       <hr class="rule">
-      <p>Paste your GitHub key to make changes. The key stays only in this browser and is only sent to GitHub.</p>
+      <div class="field">
+        <label for="password">Password</label>
+        <input type="password" id="password" autocomplete="current-password">
+      </div>
+      <div class="field">
+        <label style="display:flex;gap:8px;align-items:center;font-weight:400">
+          <input type="checkbox" id="remember"> Keep me signed in on this device
+        </label>
+        <p class="help">Only check this on your own computer or phone.</p>
+      </div>
+      <button class="button" id="signin-btn" type="button">Sign in</button>
+      <p class="status err" id="signin-msg"></p>
+      <p style="margin-top:22px;display:flex;gap:18px;flex-wrap:wrap">
+        <a href="#" id="show-setup" class="link">First-time setup or reset password</a>
+        <a href="#" id="show-key" class="link">Sign in with GitHub key instead</a>
+      </p>
+    </section>
+
+    <!-- ================= SIGN IN (GitHub key, backup) ================= -->
+    <section id="keysignin" class="card hidden">
+      <h1 class="page-title">Sign In with GitHub Key</h1>
+      <hr class="rule">
       <div class="field">
         <label for="token">GitHub key</label>
         <input type="password" id="token" autocomplete="off" spellcheck="false" placeholder="ghp_… or github_pat_…">
       </div>
-      <div class="field">
-        <label style="display:flex;gap:8px;align-items:center;font-weight:400">
-          <input type="checkbox" id="remember" checked> Keep me signed in on this device
-        </label>
-        <p class="help">Uncheck this on a shared or school computer.</p>
+      <div class="actions">
+        <button class="button" id="key-btn" type="button">Sign in</button>
+        <button class="button secondary back-to-signin" type="button">Back</button>
       </div>
-      <button class="button" id="signin-btn" type="button">Sign in</button>
-      <p class="status err" id="signin-msg"></p>
+      <p class="status err" id="key-msg"></p>
+    </section>
 
-      <details style="margin-top:20px">
+    <!-- ================= SETUP / RESET PASSWORD ================= -->
+    <section id="setup" class="card hidden">
+      <h1 class="page-title">Set Up Password</h1>
+      <hr class="rule">
+      <p>Do this once. It locks your GitHub key with a password, so after this anyone you give the password to can sign in with just the password.</p>
+      <div class="field">
+        <label for="setup-token">GitHub key</label>
+        <input type="password" id="setup-token" autocomplete="off" spellcheck="false" placeholder="ghp_… or github_pat_…">
+      </div>
+      <details style="margin:-4px 0 18px">
         <summary>How do I get a GitHub key?</summary>
         <ol class="steps">
-          <li>Open <a href="https://github.com/settings/tokens/new" target="_blank" rel="noopener">github.com/settings/tokens/new</a> and sign in.</li>
-          <li><b>Note:</b> type a name you haven't used before, like <i>Classroom portal 3</i>.</li>
+          <li>Open <a href="https://github.com/settings/tokens/new" target="_blank" rel="noopener">github.com/settings/tokens/new</a>.</li>
+          <li><b>Note:</b> a name you haven't used, like <i>Classroom portal 4</i>.</li>
           <li><b>Expiration:</b> No expiration, or the end of the school year.</li>
-          <li>Check the box <b>repo</b>.</li>
-          <li>Click <b>Generate token</b>, copy the key (starts with <code>ghp_</code>) and paste it above.</li>
+          <li>Check the box <b>repo</b>, click <b>Generate token</b>, and copy it.</li>
         </ol>
-        <p class="help">Keep this key private, like a password. Save it in a password manager so you don't lose it.</p>
       </details>
+      <div class="two">
+        <div class="field">
+          <label for="setup-pass">New portal password</label>
+          <input type="password" id="setup-pass" autocomplete="new-password">
+        </div>
+        <div class="field">
+          <label for="setup-pass2">Type it again</label>
+          <input type="password" id="setup-pass2" autocomplete="new-password">
+        </div>
+      </div>
+      <p class="help" style="margin-top:-8px">At least 10 characters. A short phrase works well, like <i>blue-apple-river-42</i>.</p>
+      <div class="actions">
+        <button class="button" id="setup-btn" type="button">Save password</button>
+        <button class="button secondary back-to-signin" type="button">Back</button>
+      </div>
+      <p class="status" id="setup-msg"></p>
+    </section>
+
+    <!-- ================= CHANGE PASSWORD (signed in) ================= -->
+    <section id="changepw" class="card hidden">
+      <h2 class="section-title">Change Portal Password</h2>
+      <div class="two" style="margin-top:12px">
+        <div class="field">
+          <label for="new-pass">New password</label>
+          <input type="password" id="new-pass" autocomplete="new-password">
+        </div>
+        <div class="field">
+          <label for="new-pass2">Type it again</label>
+          <input type="password" id="new-pass2" autocomplete="new-password">
+        </div>
+      </div>
+      <div class="actions">
+        <button class="button" id="changepw-btn" type="button">Change password</button>
+        <button class="button secondary" id="changepw-cancel" type="button">Cancel</button>
+      </div>
+      <p class="status" id="changepw-msg"></p>
     </section>
 
     <!-- ================= EDITOR ================= -->
     <section id="editor" class="hidden">
+      <div class="card">
+        <h2 class="section-title">Site Settings</h2>
+        <div class="two" style="margin-top:12px">
+          <div class="field">
+            <label for="set-name">Teacher name</label>
+            <input type="text" id="set-name" placeholder="e.g. Rabbi Eisgrau">
+          </div>
+          <div class="field">
+            <label for="set-welcome">Welcome message (home page)</label>
+            <input type="text" id="set-welcome" placeholder="e.g. Welcome to My Class">
+          </div>
+        </div>
+        <p class="help" style="margin:0">The teacher name appears on the home page and at the top of every page.</p>
+      </div>
+
       <div class="card">
         <div class="switch-row">
           <div>
@@ -92,6 +170,6 @@
     <button class="button" id="save-btn" type="button">Save &amp; Publish</button>
   </div>
 
-  <script src="portal.js?v=20261119"></script>
+  <script src="portal.js?v=20261119b"></script>
 </body>
 </html>

@@ -87,7 +87,76 @@ async function loadFromGitHub() {
   }
 }
 
+/* ---------------- password lock ----------------
+   The GitHub key is encrypted with the portal password (PBKDF2 + AES-GCM)
+   and stored in portal-key.json. Only someone with the password can unlock it. */
+const LOCK_FILE = "portal-key.json";
+const PBKDF2_ITERATIONS = 600000;
+const MIN_PASSWORD = 10;
+const toB64 = buf => { let s = ""; new Uint8Array(buf).forEach(b => s += String.fromCharCode(b)); return btoa(s); };
+const fromB64 = b64 => Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+const cryptoAvailable = () => !!(window.isSecureContext && window.crypto && crypto.subtle);
+
+async function deriveKey(password, salt, iterations) {
+  const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations, hash: "SHA-256" },
+    base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+}
+async function lockToken(tokenText, password) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await deriveKey(password, salt, PBKDF2_ITERATIONS);
+  const data = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, new TextEncoder().encode(tokenText));
+  return { v: 1, kdf: "PBKDF2-SHA256", iterations: PBKDF2_ITERATIONS, salt: toB64(salt), iv: toB64(iv), data: toB64(data) };
+}
+async function unlockToken(lock, password) {
+  const key = await deriveKey(password, fromB64(lock.salt), lock.iterations);
+  const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: fromB64(lock.iv) }, key, fromB64(lock.data));
+  return new TextDecoder().decode(plain);
+}
+async function fetchSiteLock() {
+  try { const r = await fetch(LOCK_FILE + "?t=" + Date.now(), { cache: "no-store" }); if (r.ok) return await r.json(); } catch {}
+  return null;
+}
+async function fetchGitHubLock() {
+  // Latest copy straight from GitHub (the website copy can be 1–2 minutes behind).
+  try {
+    const r = await fetch(`${API}/repos/${OWNER}/${REPO}/contents/${LOCK_FILE}`, { headers: { Accept: "application/vnd.github.raw+json" }, cache: "no-store" });
+    if (r.ok) return await r.json();
+  } catch {}
+  return null;
+}
+// Returns the GitHub key, null if the password is wrong, or undefined if no password is set up.
+async function unlockWithPassword(pw) {
+  let found = false;
+  for (const getLock of [fetchSiteLock, fetchGitHubLock]) {
+    const lock = await getLock();
+    if (!lock) continue;
+    found = true;
+    try { return await unlockToken(lock, pw); } catch {}
+  }
+  return found ? null : undefined;
+}
+async function saveLock(password) {
+  const lock = await lockToken(token, password);
+  let sha;
+  try { sha = (await gh(contentsPath(LOCK_FILE) + "?ref=" + encodeURIComponent(branch))).sha; }
+  catch (e) { if (e.status !== 404) throw e; }
+  const body = { message: "Update Teacher Portal password", content: b64EncodeUtf8(JSON.stringify(lock, null, 2) + "\n"), branch };
+  if (sha) body.sha = sha;
+  await gh(contentsPath(LOCK_FILE), { method: "PUT", body: JSON.stringify(body) });
+}
+function checkNewPassword(p1, p2) {
+  if (p1.length < MIN_PASSWORD) return `Please use at least ${MIN_PASSWORD} characters.`;
+  if (p1 !== p2) return "The two passwords don't match.";
+  return "";
+}
+const HTTPS_MSG = "Please open the portal with https:// at the start of the web address.";
+
 /* ---------------- sign in ---------------- */
+const SCREENS = ["signin", "keysignin", "setup", "changepw"];
+function showOnly(id) { SCREENS.forEach(x => $(x).classList.toggle("hidden", x !== id)); }
+
 async function connect(t) {
   token = t.trim();
   const repo = await gh(`/repos/${OWNER}/${REPO}`);
@@ -95,39 +164,120 @@ async function connect(t) {
   await loadFromGitHub();
 }
 function openEditor() {
-  $("signin").classList.add("hidden");
+  showOnly(null);
   $("editor").classList.remove("hidden");
   $("savebar").classList.remove("hidden");
   $("signout").classList.remove("hidden");
+  $("changepw-open").classList.remove("hidden");
   renderAll();
   setDirty(false);
 }
+function busy(btn, on, text) {
+  btn.disabled = on;
+  if (on) { btn.dataset.label = btn.textContent; btn.textContent = text; }
+  else if (btn.dataset.label) btn.textContent = btn.dataset.label;
+}
+const keyError = e => e.status === 401
+  ? "The GitHub key has expired or is wrong. Make a new key and use “First-time setup or reset password”."
+  : "Couldn't connect to GitHub: " + e.message;
 
+// Password sign-in
 $("signin-btn").addEventListener("click", async () => {
-  const t = $("token").value.trim();
   const msg = $("signin-msg"), btn = $("signin-btn");
   msg.textContent = "";
-  if (!t) { msg.textContent = "Please paste your GitHub key."; return; }
-  btn.disabled = true;
-  btn.textContent = "Signing in…";
+  const pw = $("password").value;
+  if (!pw) { msg.textContent = "Please type the password."; return; }
+  if (!cryptoAvailable()) { msg.textContent = HTTPS_MSG; return; }
+  busy(btn, true, "Signing in…");
   try {
+    const t = await unlockWithPassword(pw);
+    if (t === undefined) { msg.textContent = "The portal password hasn't been set up yet. Click “First-time setup” below."; return; }
+    if (t === null) { msg.textContent = "Wrong password. Please try again."; return; }
     await connect(t);
     saveToken(token, $("remember").checked);
+    $("password").value = "";
+    openEditor();
+  } catch (e) {
+    token = null;
+    msg.textContent = keyError(e);
+  } finally { busy(btn, false); }
+});
+$("password").addEventListener("keydown", e => { if (e.key === "Enter") $("signin-btn").click(); });
+
+// GitHub key sign-in (backup)
+$("show-key").addEventListener("click", e => { e.preventDefault(); showOnly("keysignin"); $("token").focus(); });
+$("key-btn").addEventListener("click", async () => {
+  const msg = $("key-msg"), btn = $("key-btn");
+  msg.textContent = "";
+  const t = $("token").value.trim();
+  if (!t) { msg.textContent = "Please paste your GitHub key."; return; }
+  busy(btn, true, "Signing in…");
+  try {
+    await connect(t);
+    saveToken(token, false);
     $("token").value = "";
     openEditor();
   } catch (e) {
     token = null;
-    msg.textContent = e.status === 401
-      ? "That key didn't work. Check that you copied the whole key, or make a new one."
-      : e.status === 404
-        ? `This key can't see the ${REPO} repository. Make a new key with the “repo” box checked.`
-        : "Couldn't sign in: " + e.message;
-  } finally {
-    btn.disabled = false;
-    btn.textContent = "Sign in";
-  }
+    msg.textContent = e.status === 401 ? "That key didn't work. Check that you copied the whole key, or make a new one." : "Couldn't sign in: " + e.message;
+  } finally { busy(btn, false); }
 });
-$("token").addEventListener("keydown", e => { if (e.key === "Enter") $("signin-btn").click(); });
+$("token").addEventListener("keydown", e => { if (e.key === "Enter") $("key-btn").click(); });
+
+// First-time setup / reset
+$("show-setup").addEventListener("click", e => { e.preventDefault(); showOnly("setup"); $("setup-token").focus(); });
+document.querySelectorAll(".back-to-signin").forEach(b => b.addEventListener("click", () => showOnly("signin")));
+$("setup-btn").addEventListener("click", async () => {
+  const msg = $("setup-msg"), btn = $("setup-btn");
+  msg.className = "status err";
+  const t = $("setup-token").value.trim();
+  const p1 = $("setup-pass").value, p2 = $("setup-pass2").value;
+  if (!t) { msg.textContent = "Please paste your GitHub key."; return; }
+  const bad = checkNewPassword(p1, p2);
+  if (bad) { msg.textContent = bad; return; }
+  if (!cryptoAvailable()) { msg.textContent = HTTPS_MSG; return; }
+  busy(btn, true, "Saving…");
+  msg.textContent = "";
+  try {
+    await connect(t);
+    await saveLock(p1); // also proves the key can save to the repository
+    ["setup-token", "setup-pass", "setup-pass2"].forEach(id => $(id).value = "");
+    saveToken(token, false);
+    msg.className = "status ok";
+    msg.textContent = "✓ Password saved. From now on, sign in with just the password.";
+    setTimeout(openEditor, 1200);
+  } catch (e) {
+    token = null;
+    msg.textContent = e.status === 401 ? "That GitHub key didn't work. Check that you copied the whole key."
+      : (e.status === 403 || e.status === 404) ? "That GitHub key can't save to the Classroom repository. Make a new key with the “repo” box checked. (GitHub said: " + e.message + ")"
+      : "Couldn't save: " + e.message;
+  } finally { busy(btn, false); }
+});
+
+// Change password (signed in)
+$("changepw-open").addEventListener("click", () => {
+  if (!cryptoAvailable()) { alert(HTTPS_MSG); return; }
+  $("changepw").classList.remove("hidden");
+  $("changepw-msg").textContent = "";
+  $("new-pass").focus();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+});
+$("changepw-cancel").addEventListener("click", () => $("changepw").classList.add("hidden"));
+$("changepw-btn").addEventListener("click", async () => {
+  const msg = $("changepw-msg"), btn = $("changepw-btn");
+  msg.className = "status err";
+  const bad = checkNewPassword($("new-pass").value, $("new-pass2").value);
+  if (bad) { msg.textContent = bad; return; }
+  busy(btn, true, "Saving…");
+  try {
+    await saveLock($("new-pass").value);
+    $("new-pass").value = $("new-pass2").value = "";
+    msg.className = "status ok";
+    msg.textContent = "✓ Password changed. The old password no longer works.";
+  } catch (e) {
+    msg.textContent = "Couldn't change the password: " + e.message;
+  } finally { busy(btn, false); }
+});
 
 $("signout").addEventListener("click", () => {
   if (dirty && !confirm("You have unsaved changes. Sign out anyway?")) return;
@@ -135,6 +285,11 @@ $("signout").addEventListener("click", () => {
   dirty = false;
   location.reload();
 });
+
+// If someone opens the portal on http://, switch to the secure https:// address.
+if (location.protocol === "http:" && !/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) {
+  location.replace("https://" + location.host + location.pathname + location.search);
+}
 
 /* ---------------- dirty / save bar ---------------- */
 function setDirty(v) {
@@ -455,7 +610,16 @@ function bannerControls() {
   drawPreview();
 }
 
+function settingsControls() {
+  const name = $("set-name"), welcome = $("set-welcome");
+  name.value = content.settings.teacherName || "";
+  welcome.value = content.settings.welcome || "";
+  name.oninput = () => { content.settings.teacherName = name.value; changed(); };
+  welcome.oninput = () => { content.settings.welcome = welcome.value; changed(); };
+}
+
 function renderAll() {
+  settingsControls();
   bannerControls();
   classworkPanel();
   assignmentPanel("homework", true);
@@ -523,7 +687,7 @@ $("save-btn").addEventListener("click", async () => {
     msg.textContent = (e.status === 403 || e.status === 404)
       ? "Couldn't save: your GitHub key isn't allowed to make changes. Edit the key on GitHub: Repository access → Only select repositories → Classroom, and Permissions → Contents → Read and write. (GitHub said: " + e.message + ")"
       : e.status === 401
-        ? "Your GitHub key has expired. Sign out and sign in with a new key."
+        ? "The GitHub key has expired. Make a new key and use “First-time setup or reset password”."
         : "Couldn't save: " + e.message + ". Please try again.";
     renderAll();
     dirty = true;

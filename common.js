@@ -1,16 +1,27 @@
 // Shared helpers used by every page.
 
+// Teacher name & welcome text: set in the Teacher Portal (falls back to data.js).
+function applyNames(name, welcome) {
+  document.querySelectorAll("[data-teacher]").forEach(el => { el.textContent = name; });
+  document.querySelectorAll("[data-welcome]").forEach(el => { el.textContent = welcome; });
+  document.title = document.title.replace(/Rabbi Eisgrau|\u2013 .*$/, m => m.startsWith("\u2013") ? "\u2013 " + name : name);
+}
 document.addEventListener("DOMContentLoaded", () => {
-  document.querySelectorAll("[data-teacher]").forEach(el => { el.textContent = SITE.teacherName; });
-  document.querySelectorAll("[data-welcome]").forEach(el => { el.textContent = SITE.welcome; });
-  document.title = document.title.replace("Rabbi Eisgrau", SITE.teacherName);
+  if (document.body.classList.contains("portal")) return;
+  applyNames(SITE.teacherName, SITE.welcome);
+  loadContent().then(c => applyNames(c.settings.teacherName, c.settings.welcome)).catch(() => {});
 });
 
 // Loads classwork / homework / news / banner (managed in the Teacher Portal).
-async function loadContent() {
-  const res = await fetch("content.json?t=" + Date.now(), { cache: "no-store" });
-  if (!res.ok) throw new Error("Could not load content.json");
-  return normalizeContent(await res.json());
+let contentPromise = null;
+function loadContent() {
+  if (!contentPromise) {
+    contentPromise = fetch("content.json?t=" + Date.now(), { cache: "no-store" })
+      .then(res => { if (!res.ok) throw new Error("Could not load content.json"); return res.json(); })
+      .then(normalizeContent)
+      .catch(e => { contentPromise = null; throw e; });
+  }
+  return contentPromise;
 }
 
 const CLASSWORK_SECTIONS = 7;
@@ -18,7 +29,9 @@ const CLASSWORK_SECTIONS = 7;
 // Fills in anything missing so older content.json files keep working.
 function normalizeContent(c) {
   c = c || {};
-  c.settings = Object.assign({ newsNewDays: 7 }, c.settings);
+  c.settings = Object.assign({ newsNewDays: 7, teacherName: SITE.teacherName, welcome: SITE.welcome }, c.settings);
+  if (!c.settings.teacherName) c.settings.teacherName = SITE.teacherName;
+  if (!c.settings.welcome) c.settings.welcome = SITE.welcome;
   c.noHomework = Object.assign({ on: false, message: "No homework tonight!" }, c.noHomework);
 
   // Classwork: a page heading + 7 named sections that can be switched on/off.

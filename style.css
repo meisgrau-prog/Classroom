@@ -647,54 +647,104 @@ details summary { cursor: pointer; font-weight: 600; color: var(--navy); }
 /* ================= Classwork page with side menu ================= */
 .cw-layout {
   display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
-  gap: 24px;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 28px 16px 56px;
+  grid-template-columns: 270px minmax(0, 1fr);
+  min-height: calc(100vh - 70px);
 }
-.cw-main { min-width: 0; max-width: none; margin: 0; padding: 0; }
+.cw-main { min-width: 0; max-width: 1040px; width: 100%; margin: 0; padding: 32px clamp(16px, 4vw, 48px) 56px; }
+
+/* follow menu: pinned to the left edge, stays in view while scrolling */
 .cw-menu {
   position: sticky;
-  top: 16px;
+  top: 0;
   align-self: start;
+  height: 100vh;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 16px;
-  background: var(--navy);
-  border-radius: 14px;
-  box-shadow: 0 8px 22px rgba(20,33,61,.18);
+  gap: 4px;
+  padding: 26px 14px;
+  background: linear-gradient(180deg, #14213d 0%, #101a33 100%);
+  border-right: 1px solid rgba(201,169,106,.35);
+  box-shadow: 6px 0 24px rgba(20,33,61,.12);
+  z-index: 5;
 }
 .cw-menu-title {
   font-family: var(--serif);
-  font-size: 1.6rem;
+  font-size: 1.7rem;
   font-weight: 700;
   color: #fff;
   text-decoration: none;
-  padding: 4px 10px 10px;
-  margin-bottom: 4px;
-  border-bottom: 1px solid rgba(201,169,106,.5);
+  padding: 0 14px 16px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid rgba(201,169,106,.45);
 }
 .cw-item {
-  display: block;
-  padding: 10px 14px;
-  border-radius: 8px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
   color: #e9e3d6;
   text-decoration: none;
   font-weight: 500;
-  border: 1px solid transparent;
   transition: background .15s, color .15s;
   word-break: break-word;
 }
-.cw-item:hover { background: rgba(255,255,255,.08); color: #fff; }
-.cw-item.active, .cw-menu-title.active { color: var(--gold-soft); }
-.cw-item.active { background: rgba(201,169,106,.14); border-color: rgba(201,169,106,.55); }
+.cw-item::before {
+  content: "";
+  flex: none;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  border: 1.5px solid var(--gold);
+  transition: background .15s;
+}
+.cw-item:hover { background: rgba(255,255,255,.07); color: #fff; }
+.cw-item.active { background: rgba(201,169,106,.16); color: var(--gold-soft); font-weight: 600; }
+.cw-item.active::before { background: var(--gold); }
+.cw-item.active::after {
+  content: "";
+  position: absolute; left: -14px; top: 8px; bottom: 8px;
+  width: 4px; border-radius: 0 4px 4px 0;
+  background: var(--gold);
+}
+.cw-menu-title.active { color: var(--gold-soft); }
+
+/* phones: the menu becomes a bar that sticks to the top while scrolling */
 @media (max-width: 760px) {
-  .cw-layout { grid-template-columns: 1fr; gap: 16px; padding-top: 16px; }
-  .cw-menu { position: static; display: grid; grid-template-columns: 1fr 1fr; }
-  .cw-menu-title { grid-column: 1 / -1; font-size: 1.35rem; }
-  .cw-item { text-align: center; padding: 10px 8px; border-color: rgba(201,169,106,.4); background: rgba(255,255,255,.04); }
+  .cw-layout { grid-template-columns: 1fr; }
+  .cw-menu {
+    position: sticky;
+    top: 0;
+    height: auto;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-right: 0;
+    border-bottom: 2px solid var(--gold);
+    box-shadow: 0 6px 16px rgba(20,33,61,.2);
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .cw-menu::-webkit-scrollbar { display: none; }
+  .cw-menu-title, .cw-item {
+    flex: none;
+    white-space: nowrap;
+    font-family: var(--sans);
+    font-size: .95rem;
+    font-weight: 600;
+    padding: 8px 14px;
+    margin: 0;
+    border: 1px solid rgba(201,169,106,.45);
+    border-radius: 999px;
+    color: #e9e3d6;
+  }
+  .cw-item::before, .cw-item.active::after { display: none; }
+  .cw-menu-title.active, .cw-item.active { background: var(--gold); color: var(--navy); border-color: var(--gold); }
+  .cw-main { padding: 18px 16px 48px; }
 }
 
 /* ================= Portal: classwork sections ================= */
