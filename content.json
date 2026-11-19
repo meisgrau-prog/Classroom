@@ -1,8 +1,4 @@
 {
-  "noHomework": {
-    "on": false,
-    "message": "No homework tonight!"
-  },
   "classwork": {
     "heading": "Classwork",
     "intro": "",
@@ -124,6 +120,39 @@
       "end": "",
       "text": "The תלמידים read the גמרא with the proper inflection. This builds fluency and confidence in reading גמרא. There is a pastry given to all participants biweekly or weekly, depending on the tier they choose. ",
       "files": []
+    }
+  ],
+  "banners": [
+    {
+      "on": false,
+      "message": "No homework tonight!",
+      "emojiStart": "",
+      "emojiEnd": "",
+      "color": "gold",
+      "pages": [
+        "home",
+        "homework"
+      ]
+    },
+    {
+      "on": true,
+      "message": "",
+      "emojiStart": "⭐",
+      "emojiEnd": "⭐",
+      "color": "blue",
+      "pages": [
+        "home"
+      ]
+    },
+    {
+      "on": true,
+      "message": "",
+      "emojiStart": "⭐",
+      "emojiEnd": "⭐",
+      "color": "blue",
+      "pages": [
+        "classwork"
+      ]
     }
   ]
 }
