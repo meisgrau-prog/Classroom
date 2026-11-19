@@ -32,16 +32,16 @@
         "id": "s3"
       },
       {
-        "name": "Section 4",
-        "on": false,
+        "name": "משניות",
+        "on": true,
         "date": "",
         "notes": "",
         "files": [],
         "id": "s4"
       },
       {
-        "name": "Section 5",
-        "on": false,
+        "name": "דברים שונים",
+        "on": true,
         "date": "",
         "notes": "",
         "files": [],
