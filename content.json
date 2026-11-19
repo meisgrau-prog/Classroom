@@ -93,7 +93,7 @@
     "teacherName": "Rabbi Eisgrau",
     "welcome": "Welcome to My Class",
     "siteLock": {
-      "on": false,
+      "on": true,
       "hash": "q3lg7LEtzXCA+oukfnERhuBNLDTHNzJ9XhNyVgaLiFI=",
       "salt": "NNHarptWF2uaHqeqB5LX9g==",
       "iterations": 150000
