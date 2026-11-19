@@ -1012,3 +1012,29 @@ html.gate-wait body > :not(.site-gate) { visibility: hidden; }
 .cr-preview li { padding: 2px 0; }
 .portal .cr-upload { display: flex; margin-bottom: 0; font-weight: 400; }
 .cr-big { font-variant-numeric: tabular-nums; word-break: break-all; }
+
+/* Random number: newest big, earlier picks small and numbered */
+.cr-pickno { font-size: .85rem; letter-spacing: 2px; text-transform: uppercase; color: var(--gold); font-weight: 700; min-height: 1.2em; }
+.cr-picks { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
+.cr-picks:empty { display: none; }
+.cr-picks-title { font-size: .78rem; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+.cr-picks-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.cr-picks-list li { padding: 4px 10px; border-radius: 999px; background: #f6f1e6; border: 1px solid var(--border); font-size: .95rem; color: var(--navy); font-variant-numeric: tabular-nums; }
+.cr-picks-list .n { color: var(--muted); font-size: .8rem; }
+.cr-stage:fullscreen .cr-picks-list li { font-size: 1.4rem; }
+
+/* Printing groups: only the groups sheet prints */
+#print-area { display: none; }
+@media print {
+  body.printing > *:not(#print-area) { display: none !important; }
+  body.printing { background: #fff !important; }
+  body.printing #print-area { display: block; font-family: var(--sans); color: #000; }
+  #print-area h1 { font-family: var(--serif); font-size: 28pt; margin: 0 0 2pt; }
+  #print-area .print-sub { margin: 0 0 14pt; color: #444; font-size: 11pt; }
+  #print-area .print-groups { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10pt; }
+  #print-area .print-group { border: 1.5pt solid #333; border-radius: 6pt; padding: 8pt 10pt; break-inside: avoid; }
+  #print-area .print-group h2 { font-family: var(--serif); font-size: 15pt; margin: 0 0 4pt; border-bottom: 1pt solid #999; padding-bottom: 3pt; }
+  #print-area .print-group ol { margin: 0; padding-left: 16pt; font-size: 12pt; }
+  #print-area .print-group li { padding: 1.5pt 0; }
+  @page { margin: 14mm; }
+}

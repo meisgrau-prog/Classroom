@@ -427,6 +427,24 @@
         h("h3", null, `Group ${i + 1}`, h("span", null, `${g.length}`)),
         h("ol", null, g.map(n => h("li", null, n))))));
     }
+    function printGroups() {
+      if (!last.length) make();
+      if (!last.length) return;
+      const old = document.getElementById("print-area");
+      if (old) old.remove();
+      const when = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+      const area = h("div", { id: "print-area" },
+        h("h1", null, "Groups"),
+        h("p", { class: "print-sub" }, when + " · " + summary.textContent),
+        h("div", { class: "print-groups" }, last.map((g, i) =>
+          h("div", { class: "print-group" }, h("h2", null, `Group ${i + 1}`), h("ol", null, g.map(n => h("li", null, n)))))));
+      document.body.appendChild(area);
+      document.body.classList.add("printing");
+      const done = () => { document.body.classList.remove("printing"); area.remove(); window.removeEventListener("afterprint", done); };
+      window.addEventListener("afterprint", done);
+      window.print();
+      setTimeout(() => { if (!matchMedia("print").matches) done(); }, 1000);
+    }
     const el = h("div", { class: "cr-view hidden" },
       h("div", { class: "card" },
         h("h2", { class: "section-title" }, "Group Maker"),
@@ -436,6 +454,8 @@
           h("button", { type: "button", class: "button", onclick: make }, "Make groups"),
           h("button", { type: "button", class: "button secondary", onclick: make }, "Shuffle again"),
           copyBtn(() => last.map((g, i) => `Group ${i + 1}: ${g.join(", ")}`).join("\n")),
+          h("button", { type: "button", class: "button secondary", onclick: printGroups },
+            h("span", { class: "cr-ico", html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M6 14h12v7H6z"/></svg>' }), "Print groups"),
           fullscreenBtn(stage)),
         summary),
       stage);
@@ -449,11 +469,22 @@
     const min = h("input", { type: "number", value: "1", min: "0", max: String(MAXN), class: "cr-num" });
     const max = h("input", { type: "number", value: "10", min: "0", max: String(MAXN), class: "cr-num" });
     const noRepeat = h("input", { type: "checkbox" });
+    const pickNo = h("div", { class: "cr-pickno" });
     const big = h("div", { class: "cr-big" }, "?");
     const note = h("p", { class: "help", style: "text-align:center" });
-    const hist = h("p", { class: "cr-history" });
-    const stage = h("div", { class: "cr-stage cr-center" }, big, note);
+    const hist = h("div", { class: "cr-picks" });
+    const stage = h("div", { class: "cr-stage cr-center" }, pickNo, big, note, hist);
     let used = [], history = [], rolling = false;
+    function drawHistory() {
+      hist.innerHTML = "";
+      pickNo.textContent = history.length ? "Pick #" + history.length : "";
+      const earlier = history.slice(0, -1);
+      if (!earlier.length) return;
+      hist.appendChild(h("div", { class: "cr-picks-title" }, "Earlier picks"));
+      const list = h("ol", { class: "cr-picks-list" });
+      earlier.forEach((v, i) => list.appendChild(h("li", null, h("span", { class: "n" }, (i + 1) + "."), " ", h("strong", null, String(v)))));
+      hist.appendChild(list);
+    }
     const chips = h("div", { class: "cr-chips" });
     function mark() { chips.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", (+b.dataset.lo === +min.value && +b.dataset.hi === +max.value) ? "true" : "false")); }
     ranges.forEach(([label, lo, hi]) => chips.appendChild(h("button", { type: "button", class: "cr-chip", "data-lo": lo, "data-hi": hi,
@@ -482,8 +513,8 @@
           clearInterval(timer);
           big.textContent = value; big.classList.remove("pop"); void big.offsetWidth; big.classList.add("pop");
           rolling = false;
-          history.unshift(value); history = history.slice(0, 12);
-          hist.textContent = "Recent: " + history.join(", ");
+          history.push(value);
+          drawHistory();
           note.textContent = noRepeat.checked ? `${size - used.length} number${size - used.length === 1 ? "" : "s"} left before repeats start again.` : `Between ${lo} and ${hi}`;
         }
       }, 50);
@@ -500,9 +531,8 @@
       h("div", { class: "card" }, stage,
         h("div", { class: "actions", style: "justify-content:center" },
           h("button", { type: "button", class: "button cr-go", onclick: pick }, "Pick a number"),
-          h("button", { type: "button", class: "button secondary", onclick: () => { used = []; history = []; hist.textContent = ""; big.textContent = "?"; note.textContent = ""; } }, "Reset"),
-          fullscreenBtn(stage)),
-        hist));
+          h("button", { type: "button", class: "button secondary", onclick: () => { used = []; history = []; drawHistory(); big.textContent = "?"; note.textContent = ""; } }, "Reset"),
+          fullscreenBtn(stage))));
     mark();
     return { el };
   }

@@ -23,8 +23,8 @@ Sign in with the **portal password**. (Backup: "Sign in with GitHub key instead"
 Switch between **Website** (edit the site) and **Classroom** (teacher tools):
 - **Students:** click **Upload Excel sheet** (Excel .xlsx, CSV, or text), check the first/last name columns and starting row, then **Use these names** — or type names. Click names to mark absent.
   The list is saved only in that browser on that device — never on GitHub or the website.
-- **Group Maker:** choose how many groups; uneven numbers give some groups one extra student.
-- **Random Number:** quick ranges (1–6 up to 1–10,000) or any range up to 10,000; optional "no repeats".
+- **Group Maker:** choose how many groups; uneven numbers give some groups one extra student. **Print groups** prints a clean sheet of just the groups.
+- **Random Number:** quick ranges (1–6 up to 1–10,000) or any range up to 10,000; optional "no repeats". The newest pick shows big; earlier picks stay listed in order (1, 2, 3…).
 - **Random Student:** pick one student (everyone gets a turn before repeats) or shuffle the whole order.
 
 ### First-time setup (or forgot the password / GitHub key expired)
