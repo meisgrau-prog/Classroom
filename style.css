@@ -993,3 +993,22 @@ html.gate-wait body > :not(.site-gate) { visibility: hidden; }
 .cr-order li { padding: 4px 0; break-inside: avoid; }
 .cr-stage:fullscreen .cr-order { font-size: 1.6rem; }
 .cr-empty { text-align: center; padding: 24px; color: var(--muted); }
+.cr-upload {
+  display: flex; align-items: center; gap: 16px;
+  padding: 18px 22px; margin-top: 6px;
+  border: 2px dashed var(--gold); border-radius: 14px;
+  background: #fdfaf3; color: var(--navy); cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+.cr-upload:hover, .cr-upload.drag { background: #f7efdc; border-style: solid; }
+.cr-upload input { display: none; }
+.cr-upload-icon { flex: none; width: 54px; height: 54px; border-radius: 12px; display: grid; place-items: center; background: var(--navy); color: var(--gold-soft); }
+.cr-upload-icon svg { width: 30px; height: 30px; }
+.cr-upload strong { display: block; font-family: var(--serif); font-size: 1.45rem; }
+.cr-upload small { display: block; color: var(--muted); font-size: .9rem; }
+.cr-chooser { margin-top: 16px; padding: 18px 20px; border: 1px solid var(--gold); border-radius: 12px; background: #fffdf8; }
+.portal .cr-chooser select { width: 100%; padding: 10px 12px; font: inherit; border: 1px solid var(--border); border-radius: 8px; background: #fff; }
+.cr-preview { margin: 0; padding-left: 24px; columns: 2 180px; }
+.cr-preview li { padding: 2px 0; }
+.portal .cr-upload { display: flex; margin-bottom: 0; font-weight: 400; }
+.cr-big { font-variant-numeric: tabular-nums; word-break: break-all; }

@@ -149,29 +149,49 @@
     });
   }
 
-  // Turn rows from a sheet into a list of names.
-  function rowsToNames(rows) {
-    rows = rows.map(r => r.map(c => String(c || "").trim())).filter(r => r.some(Boolean));
-    if (!rows.length) return [];
-    const head = rows[0].map(c => c.toLowerCase());
-    const find = re => head.findIndex(c => re.test(c));
-    const first = find(/^first|first\s*name|given/), last = find(/^last|last\s*name|surname|family/);
-    const nameCol = find(/^(student|name|full\s*name|student\s*name)s?$/);
-    const looksHeader = first >= 0 || last >= 0 || nameCol >= 0;
-    const body = looksHeader ? rows.slice(1) : rows;
-    let names;
-    if (first >= 0 && last >= 0) names = body.map(r => [r[first], r[last]].filter(Boolean).join(" "));
-    else if (nameCol >= 0) names = body.map(r => r[nameCol]);
-    else names = body.map(r => r.find(Boolean) || "");
-    const seen = new Set();
-    return names.map(n => n.replace(/\s+/g, " ").trim()).filter(n => n && !seen.has(n.toLowerCase()) && seen.add(n.toLowerCase()));
+  // Clean the rows from a sheet (trim, drop empty rows).
+  function cleanRows(rows) {
+    return rows.map(r => Array.from(r, c => String(c == null ? "" : c).replace(/\s+/g, " ").trim()))
+               .filter(r => r.some(Boolean));
+  }
+  const colLetter = i => { let s = ""; i++; while (i > 0) { const m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; };
+  const isWordy = v => !!v && /[A-Za-zÀ-ɏ֐-׿]/.test(v) && !/\d/.test(v);
+
+  // Guess which row the names start on and which columns hold the first and last names.
+  function detectColumns(rows) {
+    for (let hi = 0; hi < Math.min(6, rows.length); hi++) {
+      const head = rows[hi].map(c => c.toLowerCase());
+      const find = re => head.findIndex(c => re.test(c));
+      const first = find(/first|given|fname|f\.\s*name/);
+      const last = find(/last|surname|family|lname|l\.\s*name/);
+      const name = find(/^(student|name|full\s*name|student\s*name|students|names)$/);
+      if (first >= 0) return { start: hi + 1, first, last };
+      if (name >= 0) return { start: hi + 1, first: name, last: last >= 0 && last !== name ? last : -1 };
+      if (last >= 0) return { start: hi + 1, first: last, last: -1 };
+    }
+    // No headings: if the first two columns are mostly single words, treat them as First | Last.
+    const body = rows.slice(0, 40);
+    const twoWords = body.filter(r => isWordy(r[0]) && isWordy(r[1]) && !/\s/.test(r[0]) && !/\s/.test(r[1])).length;
+    if (body.length && twoWords / body.length >= 0.6) return { start: 0, first: 0, last: 1 };
+    const col = Math.max(0, (rows[0] || []).findIndex(isWordy));
+    return { start: 0, first: col, last: -1 };
   }
 
-  async function readSheet(file) {
+  function namesFromColumns(rows, opt) {
+    const seen = new Set();
+    return rows.slice(Math.max(0, opt.start || 0)).map(r => {
+      const f = opt.first >= 0 ? (r[opt.first] || "") : "", l = opt.last >= 0 ? (r[opt.last] || "") : "";
+      return [f, l].filter(Boolean).join(" ").trim();
+    }).filter(n => n && !seen.has(n.toLowerCase()) && seen.add(n.toLowerCase()));
+  }
+  // Kept for simple uses (and tests): rows → names using the automatic guess.
+  function rowsToNames(rows) { rows = cleanRows(rows); return namesFromColumns(rows, detectColumns(rows)); }
+
+  async function readSheetRows(file) {
     const ext = (file.name.split(".").pop() || "").toLowerCase();
     if (ext === "xls") throw new Error("Old Excel (.xls) files can't be read. In Excel, use File → Save As → Excel Workbook (.xlsx) or CSV.");
-    if (ext === "xlsx" || ext === "xlsm") return rowsToNames(await readXlsx(await file.arrayBuffer()));
-    return rowsToNames(parseDelimited(await file.text()));
+    const rows = (ext === "xlsx" || ext === "xlsm") ? await readXlsx(await file.arrayBuffer()) : parseDelimited(await file.text());
+    return cleanRows(rows);
   }
 
   /* ---------- page ---------- */
@@ -246,25 +266,93 @@
   function studentsView() {
     const msg = h("p", { class: "status" });
     const input = h("input", { type: "file", accept: ".xlsx,.xlsm,.csv,.txt,.tsv,.xls" });
-    const zone = h("label", { class: "upload-zone" },
-      "＋ Upload a sheet of student names — Excel (.xlsx), CSV, or text. Click or drag the file here.", input);
+    const bigBtn = h("label", { class: "cr-upload" },
+      h("span", { class: "cr-upload-icon", html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6M12 10v0"/></svg>' }),
+      h("span", null, h("strong", null, "Upload Excel sheet"), h("small", null, "Excel (.xlsx), CSV, or text — or drag the file here")),
+      input);
+    const chooser = h("div", { class: "cr-chooser hidden" });
+
+    function showChooser(rows, fileName) {
+      const guess = detectColumns(rows);
+      const width = Math.max(...rows.slice(0, 50).map(r => r.length));
+      const label = i => {
+        const st = start();
+        const top = st > 0 ? ((rows[st - 1] || [])[i] || "") : "";
+        const sample = (rows[st] || [])[i] || "";
+        return `Column ${colLetter(i)}` + (top ? ` — “${top}”` : sample ? ` (e.g. ${sample})` : "");
+      };
+      const firstSel = h("select"), lastSel = h("select");
+      const startInp = h("input", { type: "number", min: "1", class: "cr-num" });
+      startInp.value = guess.start + 1;
+      const start = () => Math.max(0, Math.min(rows.length - 1, (parseInt(startInp.value, 10) || 1) - 1));
+      let pickFirst = guess.first, pickLast = guess.last;
+      function fillSelects() {
+        firstSel.innerHTML = ""; lastSel.innerHTML = "";
+        lastSel.appendChild(h("option", { value: "-1" }, "— None (full name is in one column) —"));
+        for (let i = 0; i < width; i++) {
+          firstSel.appendChild(h("option", { value: i }, label(i)));
+          lastSel.appendChild(h("option", { value: i }, label(i)));
+        }
+        firstSel.value = pickFirst; lastSel.value = pickLast;
+      }
+      fillSelects();
+      firstSel.addEventListener("change", () => { pickFirst = +firstSel.value; });
+      lastSel.addEventListener("change", () => { pickLast = +lastSel.value; });
+      const preview = h("ol", { class: "cr-preview" });
+      const useBtn = h("button", { type: "button", class: "button" });
+      let names = [];
+      function update() {
+        names = namesFromColumns(rows, { start: start(), first: +firstSel.value, last: +lastSel.value });
+        preview.innerHTML = "";
+        names.slice(0, 8).forEach(n => preview.appendChild(h("li", null, n)));
+        if (names.length > 8) preview.appendChild(h("li", { class: "help", style: "list-style:none" }, `…and ${names.length - 8} more`));
+        useBtn.textContent = `Use these ${names.length} names`;
+        useBtn.disabled = !names.length;
+      }
+      [firstSel, lastSel].forEach(x => x.addEventListener("change", update));
+      startInp.addEventListener("input", () => { fillSelects(); update(); });
+      useBtn.addEventListener("click", () => {
+        if (state.names.length && !confirm(`Replace your current list (${state.names.length} students) with these ${names.length}?`)) return;
+        state = { names, absent: [] }; save();
+        chooser.classList.add("hidden");
+        msg.className = "status ok"; msg.textContent = `✓ Loaded ${names.length} students from ${fileName}.`;
+        refreshAll();
+      });
+      chooser.innerHTML = "";
+      chooser.append(
+        h("h3", { class: "section-title", style: "font-size:1.35rem" }, "Check the names from " + fileName),
+        h("p", { class: "help" }, "We guessed which columns hold the names. Change them if needed — first and last names in different columns are joined together."),
+        h("div", { class: "two" },
+          h("div", { class: "field" }, h("label", null, "First name column"), firstSel),
+          h("div", { class: "field" }, h("label", null, "Last name column"), lastSel)),
+        h("div", { class: "cr-row", style: "justify-content:flex-start" },
+          h("label", { style: "margin:0;font-weight:600" }, "Names start on row"), startInp,
+          h("span", { class: "help", style: "margin:0" }, "(the row number in Excel — skips titles and headings above it)")),
+        h("p", { class: "label-text", style: "margin:12px 0 4px" }, "Preview"),
+        preview,
+        h("div", { class: "actions" }, useBtn,
+          h("button", { type: "button", class: "button secondary", onclick: () => { chooser.classList.add("hidden"); msg.textContent = ""; } }, "Cancel")));
+      chooser.classList.remove("hidden");
+      update();
+      chooser.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
     async function useFile(file) {
       msg.className = "status"; msg.textContent = "Reading " + file.name + "…";
+      chooser.classList.add("hidden");
       try {
-        const names = await readSheet(file);
-        if (!names.length) throw new Error("No names were found in that file.");
-        if (state.names.length && !confirm(`Replace your current list (${state.names.length} students) with ${names.length} students from ${file.name}?`)) { msg.textContent = ""; return; }
-        state = { names, absent: [] }; save();
-        msg.className = "status ok"; msg.textContent = `✓ Loaded ${names.length} students from ${file.name}.`;
-        refreshAll();
+        const rows = await readSheetRows(file);
+        if (!rows.length) throw new Error("That sheet is empty.");
+        msg.textContent = "";
+        showChooser(rows, file.name);
       } catch (e) {
         msg.className = "status err"; msg.textContent = e.message || "Couldn't read that file.";
       }
     }
     input.addEventListener("change", () => { if (input.files[0]) useFile(input.files[0]); input.value = ""; });
-    zone.addEventListener("dragover", e => { e.preventDefault(); zone.classList.add("drag"); });
-    zone.addEventListener("dragleave", () => zone.classList.remove("drag"));
-    zone.addEventListener("drop", e => { e.preventDefault(); zone.classList.remove("drag"); if (e.dataTransfer.files[0]) useFile(e.dataTransfer.files[0]); });
+    bigBtn.addEventListener("dragover", e => { e.preventDefault(); bigBtn.classList.add("drag"); });
+    bigBtn.addEventListener("dragleave", () => bigBtn.classList.remove("drag"));
+    bigBtn.addEventListener("drop", e => { e.preventDefault(); bigBtn.classList.remove("drag"); if (e.dataTransfer.files[0]) useFile(e.dataTransfer.files[0]); });
 
     const area = h("textarea", { class: "cr-names", placeholder: "Or type or paste names here, one per line", rows: "10" });
     let t = null;
@@ -297,8 +385,8 @@
       h("div", { class: "card" },
         h("h2", { class: "section-title" }, "Student List"),
         h("p", { class: "help" }, "Saved only on this device, in this browser — not on GitHub or the website. If you use another computer, upload the sheet there too."),
-        zone, msg,
-        h("div", { class: "field", style: "margin-top:16px" }, h("label", null, "Names (one per line)"), area)),
+        bigBtn, msg, chooser,
+        h("div", { class: "field", style: "margin-top:16px" }, h("label", null, "Names (one per line) — you can also type or fix names here"), area)),
       h("div", { class: "card" },
         h("div", { class: "cr-row" },
           h("h2", { class: "section-title", style: "margin:0" }, "Who's Here Today"), count),
@@ -356,9 +444,10 @@
 
   /* ---------- Random Number ---------- */
   function numberView() {
-    const ranges = [["1–6 (dice)", 1, 6], ["1–10", 1, 10], ["1–20", 1, 20], ["1–50", 1, 50], ["1–100", 1, 100]];
-    const min = h("input", { type: "number", value: "1", class: "cr-num" });
-    const max = h("input", { type: "number", value: "10", class: "cr-num" });
+    const MAXN = 10000;
+    const ranges = [["1–6 (dice)", 1, 6], ["1–10", 1, 10], ["1–20", 1, 20], ["1–50", 1, 50], ["1–100", 1, 100], ["1–1,000", 1, 1000], ["1–10,000", 1, 10000]];
+    const min = h("input", { type: "number", value: "1", min: "0", max: String(MAXN), class: "cr-num" });
+    const max = h("input", { type: "number", value: "10", min: "0", max: String(MAXN), class: "cr-num" });
     const noRepeat = h("input", { type: "checkbox" });
     const big = h("div", { class: "cr-big" }, "?");
     const note = h("p", { class: "help", style: "text-align:center" });
@@ -375,12 +464,11 @@
       let lo = Math.ceil(+min.value), hi = Math.floor(+max.value);
       if (!Number.isFinite(lo) || !Number.isFinite(hi)) { note.textContent = "Type a lowest and highest number."; return; }
       if (lo > hi) [lo, hi] = [hi, lo];
-      if (hi - lo > 1e9) { note.textContent = "Please choose a smaller range."; return; }
+      if (lo < 0 || hi > MAXN) { note.textContent = "Please choose numbers from 0 up to 10,000."; return; }
       const size = hi - lo + 1;
       let value;
       if (noRepeat.checked) {
         if (used.length >= size) used = [];
-        if (size > 10000) { note.textContent = "“No repeats” works for ranges up to 10,000 numbers."; return; }
         const left = [];
         for (let v = lo; v <= hi; v++) if (!used.includes(v)) left.push(v);
         value = left[randInt(left.length)];
@@ -403,7 +491,7 @@
     const el = h("div", { class: "cr-view hidden" },
       h("div", { class: "card" },
         h("h2", { class: "section-title" }, "Random Number"),
-        h("p", { class: "help" }, "Pick a range, then press Pick."),
+        h("p", { class: "help" }, "Pick a quick range or type your own (any numbers up to 10,000), then press Pick."),
         chips,
         h("div", { class: "cr-row", style: "justify-content:flex-start;margin-top:12px" },
           h("label", { style: "margin:0;font-weight:600" }, "From"), min,
@@ -477,5 +565,5 @@
     return { el, refresh: () => { picked = picked.filter(n => present().includes(n)); } };
   }
 
-  window.Classroom = { open, _test: { rowsToNames, parseDelimited, readXlsx, shuffle, randInt } };
+  window.Classroom = { open, _test: { rowsToNames, detectColumns, namesFromColumns, cleanRows, parseDelimited, readXlsx, shuffle, randInt } };
 })();
