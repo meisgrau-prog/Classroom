@@ -94,7 +94,7 @@
     }
   ],
   "settings": {
-    "newsNewDays": 7,
+    "newsNewDays": 1,
     "teacherName": "Rabbi Eisgrau",
     "welcome": "Welcome to My Class"
   },
