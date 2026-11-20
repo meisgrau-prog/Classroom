@@ -53,6 +53,7 @@
     groups: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5"/></svg>',
     number: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1.2" fill="currentColor"/><circle cx="16" cy="8" r="1.2" fill="currentColor"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/><circle cx="8" cy="16" r="1.2" fill="currentColor"/><circle cx="16" cy="16" r="1.2" fill="currentColor"/></svg>',
     student: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/></svg>',
+    raffle: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 0 2-2h14a2 2 0 0 0 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 0-2 2H5a2 2 0 0 0-2-2v-2a2 2 0 0 0 0-4z"/><path d="M15 6v12" stroke-dasharray="1.5 2"/><path d="M7.5 10.5h4M7.5 13.5h3"/></svg>',
     full: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>'
   };
 
@@ -217,7 +218,8 @@
       ["students", "Students", ICON.students],
       ["groups", "Group Maker", ICON.groups],
       ["number", "Random Number", ICON.number],
-      ["picker", "Random Student", ICON.student]
+      ["picker", "Random Student", ICON.student],
+      ["raffle", "Raffle", ICON.raffle]
     ];
     const menu = h("nav", { class: "cr-menu", "aria-label": "Classroom tools" });
     tools.forEach(([key, label, icon]) => {
@@ -229,6 +231,7 @@
     views.groups = groupsView();
     views.number = numberView();
     views.picker = pickerView();
+    views.raffle = raffleView();
     Object.values(views).forEach(v => root.appendChild(v.el));
     show(current);
   }
@@ -246,8 +249,27 @@
       h("p", null, present().length === 0 && state.names.length ? "Everyone is marked absent." : "Add your students first."),
       h("button", { type: "button", class: "button", onclick: () => show("students") }, "Go to Students")));
   }
-  function fullscreenBtn(target) {
+  // Full screen for the projector. `actions` = [[label, fn, isMain], …] are shown inside full screen too,
+  // and Space / Enter does the main action, so the next move never needs leaving full screen.
+  function fullscreenBtn(target, actions) {
     if (!document.documentElement.requestFullscreen) return null;
+    actions = actions || [];
+    if (!target.querySelector(":scope > .fs-bar")) {
+      const bar = h("div", { class: "fs-bar" });
+      actions.forEach(([label, fn, main]) =>
+        bar.appendChild(h("button", { type: "button", class: "button" + (main ? " cr-go" : " secondary"), onclick: fn }, label)));
+      bar.appendChild(h("button", { type: "button", class: "button secondary fs-exit", onclick: () => document.exitFullscreen() },
+        h("span", { class: "cr-ico", html: ICON.full }), "Exit full screen"));
+      target.appendChild(bar);
+      const main = actions.find(a => a[2]);
+      if (main) document.addEventListener("keydown", e => {
+        if (document.fullscreenElement !== target || e.repeat) return;
+        if (e.key === " " || e.key === "Enter") {
+          if (e.target.closest && e.target.closest("button, input, select, textarea")) return;
+          e.preventDefault(); main[1]();
+        }
+      });
+    }
     return h("button", { type: "button", class: "button secondary", onclick: () => {
       if (document.fullscreenElement) document.exitFullscreen(); else target.requestFullscreen().catch(() => {});
     } }, h("span", { class: "cr-ico", html: ICON.full }), "Full screen");
@@ -467,7 +489,7 @@
           h("button", { type: "button", class: "button secondary", onclick: make }, "Shuffle again"),
           copyBtn(() => last.map((g, i) => `Group ${i + 1}: ${g.join(", ")}`).join("\n")),
           printBtn("Print groups", printGroups),
-          fullscreenBtn(stage)),
+          fullscreenBtn(stage, [["Shuffle again", make, true]])),
         summary),
       stage);
     return { el, refresh: () => { num.max = Math.max(2, present().length); if (!last.length) out.innerHTML = ""; if (present().length < 2) needStudents(out); } };
@@ -548,7 +570,7 @@
             if (!history.length) { note.textContent = "Pick a number first, then print."; return; }
             printSheet("Random Numbers", `${history.length} pick${history.length === 1 ? "" : "s"} · range ${lastRange}`, printList(history));
           }),
-          fullscreenBtn(stage))));
+          fullscreenBtn(stage, [["Pick a number", pick, true]]))));
     mark();
     return { el };
   }
@@ -575,9 +597,8 @@
     }
     function pick() {
       const kids = present();
-      if (!kids.length) return needStudents(stage), null;
+      if (!kids.length) { big.textContent = "?"; note.textContent = "Add your students first (Students button above)."; return; }
       if (rolling) return;
-      if (!stage.contains(big)) { stage.innerHTML = ""; stage.append(pickNo, big, note, hist); }
       let pool = fair.checked ? kids.filter(n => !picked.includes(n)) : kids;
       if (!pool.length) { picked = []; pool = kids; }
       const name = pool[randInt(pool.length)];
@@ -617,7 +638,7 @@
             if (!log.length) { note.textContent = "Pick a student first, then print."; return; }
             printSheet("Students Picked", `${log.length} pick${log.length === 1 ? "" : "s"}, in the order they were picked`, printList(log));
           }),
-          fullscreenBtn(stage))),
+          fullscreenBtn(stage, [["Pick a student", pick, true]]))),
       h("div", { class: "card" },
         h("h2", { class: "section-title" }, "Randomize the Order"),
         h("p", { class: "help" }, "Puts every student who is here in a random order — for turns, presentations, or lining up."),
@@ -629,10 +650,397 @@
             if (!order.length) return;
             printSheet("Student Order", `${order.length} students in random order`, printList(order));
           }),
-          fullscreenBtn(orderStage)),
+          fullscreenBtn(orderStage, [["Shuffle the order", shuffleOrder, true]])),
         orderStage));
     return { el, refresh: () => { picked = picked.filter(n => present().includes(n)); } };
   }
+
+
+  /* ---------- Raffle ---------- */
+  const RAFFLE_STORE = "classroom_raffle_v1";
+  function raffleView() {
+    let R = { entries: [], winners: [], after: "ticket", sound: true };
+    try { const s = JSON.parse(localStorage.getItem(RAFFLE_STORE) || "null"); if (s && Array.isArray(s.entries)) R = Object.assign(R, s); } catch {}
+    const saveR = () => { try { localStorage.setItem(RAFFLE_STORE, JSON.stringify(R)); } catch {} };
+    const total = () => R.entries.reduce((n, e) => n + e.tickets, 0);
+
+    /* entry form */
+    const nameIn = h("input", { type: "text", placeholder: "Name", class: "rf-name" });
+    const countIn = h("input", { type: "number", min: "1", max: "500", value: "1", class: "cr-num", "aria-label": "Number of tickets" });
+    const formMsg = h("p", { class: "status" });
+    function addTickets(name, count) {
+      name = String(name || "").replace(/\s+/g, " ").trim();
+      count = Math.max(1, Math.min(500, parseInt(count, 10) || 1));
+      if (!name) return false;
+      const found = R.entries.find(e => e.name.toLowerCase() === name.toLowerCase());
+      if (found) found.tickets += count; else R.entries.push({ name, tickets: count });
+      return true;
+    }
+    function addFromForm() {
+      if (!addTickets(nameIn.value, countIn.value)) { formMsg.className = "status err"; formMsg.textContent = "Type a name first."; return; }
+      formMsg.textContent = ""; nameIn.value = ""; countIn.value = "1"; nameIn.focus();
+      saveR(); drawEntries();
+    }
+    nameIn.addEventListener("keydown", e => { if (e.key === "Enter") addFromForm(); });
+    countIn.addEventListener("keydown", e => { if (e.key === "Enter") addFromForm(); });
+
+    const list = h("div", { class: "rf-list" });
+    const totalEl = h("span", { class: "cr-count" });
+    function drawEntries() {
+      list.innerHTML = "";
+      const t = total();
+      totalEl.textContent = `${t} ticket${t === 1 ? "" : "s"} · ${R.entries.length} name${R.entries.length === 1 ? "" : "s"}`;
+      if (!R.entries.length) { list.appendChild(h("p", { class: "help", style: "margin:6px 0" }, "No tickets yet. Add names above.")); return; }
+      let n = 1;
+      R.entries.forEach((e, i) => {
+        const first = n, last = n + e.tickets - 1; n += e.tickets;
+        const step = d => () => { e.tickets += d; if (e.tickets < 1) R.entries.splice(i, 1); saveR(); drawEntries(); };
+        list.appendChild(h("div", { class: "rf-row" },
+          h("span", { class: "rf-row-name" }, e.name),
+          h("span", { class: "rf-row-nums" }, e.tickets === 1 ? `#${first}` : `#${first}–${last}`),
+          h("span", { class: "rf-stepper" },
+            h("button", { type: "button", "aria-label": "One less ticket for " + e.name, onclick: step(-1) }, "−"),
+            h("strong", null, String(e.tickets)),
+            h("button", { type: "button", "aria-label": "One more ticket for " + e.name, onclick: step(1) }, "+")),
+          h("button", { type: "button", class: "rf-x", "aria-label": "Remove " + e.name, onclick: () => { R.entries.splice(i, 1); saveR(); drawEntries(); } }, "×")));
+      });
+    }
+
+    /* load names + ticket counts from a sheet */
+    const sheetInput = h("input", { type: "file", accept: ".xlsx,.xlsm,.csv,.txt,.tsv,.xls" });
+    const sheetBtn = h("label", { class: "cr-upload rf-upload" },
+      h("span", { class: "cr-upload-icon", html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M8 13h8M8 17h8M12 11v8"/></svg>' }),
+      h("span", null, h("strong", null, "Upload Excel sheet of tickets"), h("small", null, "Names and how many tickets each — Excel (.xlsx), CSV, or text")),
+      sheetInput);
+    const sheetMsg = h("p", { class: "status" });
+    const sheetBox = h("div", { class: "cr-chooser hidden" });
+    const isCount = v => /^\s*\d{1,4}\s*$/.test(v || "") && +v >= 0;
+    function detectTicketCol(rows, start, used) {
+      if (start > 0) {
+        const head = (rows[start - 1] || []).map(c => c.toLowerCase());
+        const i = head.findIndex((c, k) => !used.includes(k) && /ticket|count|qty|quantity|amount|entries|entry|chances|number|#|total/.test(c));
+        if (i >= 0) return i;
+      }
+      const body = rows.slice(start, start + 60), width = Math.max(0, ...body.map(r => r.length));
+      let best = -1, bestScore = 0;
+      for (let k = 0; k < width; k++) {
+        if (used.includes(k)) continue;
+        const score = body.filter(r => isCount(r[k])).length / (body.length || 1);
+        if (score > bestScore) { best = k; bestScore = score; }
+      }
+      return bestScore >= 0.6 ? best : -1;
+    }
+    function showSheet(rows, fileName) {
+      const guess = detectColumns(rows);
+      // a numbers-only "last name" guess is really the ticket column
+      if (guess.last >= 0 && rows.slice(guess.start, guess.start + 30).every(r => !r[guess.last] || isCount(r[guess.last]))) guess.last = -1;
+      let pick = { first: guess.first, last: guess.last, tickets: detectTicketCol(rows, guess.start, [guess.first, guess.last]) };
+      const width = Math.max(...rows.slice(0, 60).map(r => r.length));
+      const startInp = h("input", { type: "number", min: "1", class: "cr-num" }); startInp.value = guess.start + 1;
+      const start = () => Math.max(0, Math.min(rows.length - 1, (parseInt(startInp.value, 10) || 1) - 1));
+      const label = i => {
+        const st = start(), top = st > 0 ? ((rows[st - 1] || [])[i] || "") : "", sample = (rows[st] || [])[i] || "";
+        return `Column ${colLetter(i)}` + (top ? ` — “${top}”` : sample ? ` (e.g. ${sample})` : "");
+      };
+      const firstSel = h("select"), lastSel = h("select"), tixSel = h("select");
+      function fill() {
+        [firstSel, lastSel, tixSel].forEach(x => x.innerHTML = "");
+        lastSel.appendChild(h("option", { value: "-1" }, "— None (full name in one column) —"));
+        tixSel.appendChild(h("option", { value: "-1" }, "— None (1 ticket each) —"));
+        for (let i = 0; i < width; i++) [firstSel, lastSel, tixSel].forEach(x => x.appendChild(h("option", { value: i }, label(i))));
+        firstSel.value = pick.first; lastSel.value = pick.last; tixSel.value = pick.tickets;
+      }
+      fill();
+      const preview = h("ol", { class: "cr-preview" }), sum = h("p", { class: "help" });
+      const addBtn = h("button", { type: "button", class: "button" }), replBtn = h("button", { type: "button", class: "button secondary" }, "Replace all tickets");
+      let found = [];
+      function update() {
+        const merged = new Map();
+        rows.slice(start()).forEach(r => {
+          const name = [pick.first >= 0 ? r[pick.first] : "", pick.last >= 0 ? r[pick.last] : ""].filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+          if (!name) return;
+          let n = pick.tickets >= 0 ? parseInt(String(r[pick.tickets] || "").trim(), 10) : 1;
+          if (!Number.isFinite(n) || n < 1) return;            // 0 or blank tickets = not in the raffle
+          n = Math.min(n, 500);
+          const key = name.toLowerCase();
+          if (merged.has(key)) merged.get(key).tickets += n; else merged.set(key, { name, tickets: n });
+        });
+        found = [...merged.values()];
+        preview.innerHTML = "";
+        found.slice(0, 10).forEach(e => preview.appendChild(h("li", null, `${e.name} × ${e.tickets}`)));
+        if (found.length > 10) preview.appendChild(h("li", { class: "help", style: "list-style:none" }, `…and ${found.length - 10} more`));
+        const t = found.reduce((a, e) => a + e.tickets, 0);
+        sum.textContent = found.length ? `${found.length} names · ${t} tickets in total` : "No names with tickets found — check the columns above.";
+        addBtn.textContent = `Add these ${t} tickets`;
+        addBtn.disabled = replBtn.disabled = !found.length;
+      }
+      firstSel.addEventListener("change", () => { pick.first = +firstSel.value; update(); });
+      lastSel.addEventListener("change", () => { pick.last = +lastSel.value; update(); });
+      tixSel.addEventListener("change", () => { pick.tickets = +tixSel.value; update(); });
+      startInp.addEventListener("input", () => { fill(); update(); });
+      const finish = replace => {
+        if (replace && R.entries.length && !confirm(`Replace the ${total()} tickets in the drum with these?`)) return;
+        if (replace) R.entries = [];
+        found.forEach(e => addTickets(e.name, e.tickets));
+        saveR(); drawEntries();
+        sheetBox.classList.add("hidden");
+        sheetMsg.className = "status ok";
+        sheetMsg.textContent = `✓ ${replace ? "Replaced with" : "Added"} ${found.reduce((a, e) => a + e.tickets, 0)} tickets for ${found.length} names from ${fileName}.`;
+      };
+      addBtn.addEventListener("click", () => finish(false));
+      replBtn.addEventListener("click", () => finish(true));
+      sheetBox.innerHTML = "";
+      sheetBox.append(
+        h("h3", { class: "section-title", style: "font-size:1.35rem" }, "Check the tickets from " + fileName),
+        h("p", { class: "help" }, "We guessed the columns. Change them if needed. Names that appear more than once are added together; 0 or blank tickets are skipped."),
+        h("div", { class: "rf-three" },
+          h("div", { class: "field" }, h("label", null, "First name column"), firstSel),
+          h("div", { class: "field" }, h("label", null, "Last name column"), lastSel),
+          h("div", { class: "field" }, h("label", null, "Number of tickets column"), tixSel)),
+        h("div", { class: "cr-row", style: "justify-content:flex-start" },
+          h("label", { style: "margin:0;font-weight:600" }, "Names start on row"), startInp,
+          h("span", { class: "help", style: "margin:0" }, "(the row number in Excel)")),
+        h("p", { class: "label-text", style: "margin:12px 0 4px" }, "Preview"), preview, sum,
+        h("div", { class: "actions" }, addBtn, replBtn,
+          h("button", { type: "button", class: "small-btn", onclick: () => { sheetBox.classList.add("hidden"); sheetMsg.textContent = ""; } }, "Cancel")));
+      sheetBox.classList.remove("hidden");
+      update();
+    }
+    async function useSheet(file) {
+      sheetMsg.className = "status"; sheetMsg.textContent = "Reading " + file.name + "…"; sheetBox.classList.add("hidden");
+      try {
+        const rows = await readSheetRows(file);
+        if (!rows.length) throw new Error("That sheet is empty.");
+        sheetMsg.textContent = ""; showSheet(rows, file.name);
+      } catch (e) { sheetMsg.className = "status err"; sheetMsg.textContent = e.message || "Couldn't read that file."; }
+    }
+    sheetInput.addEventListener("change", () => { if (sheetInput.files[0]) useSheet(sheetInput.files[0]); sheetInput.value = ""; });
+    sheetBtn.addEventListener("dragover", e => { e.preventDefault(); sheetBtn.classList.add("drag"); });
+    sheetBtn.addEventListener("dragleave", () => sheetBtn.classList.remove("drag"));
+    sheetBtn.addEventListener("drop", e => { e.preventDefault(); sheetBtn.classList.remove("drag"); if (e.dataTransfer.files[0]) useSheet(e.dataTransfer.files[0]); });
+
+    /* stage: drum + ticket window + winner ticket + confetti */
+    const drum = h("div", { class: "rf-drum", html: DRUM_SVG });
+    const flicker = h("div", { class: "rf-flicker" });
+    const winner = h("div", { class: "rf-winner hidden" });
+    const canvas = h("canvas", { class: "rf-confetti" });
+    const stage = h("div", { class: "cr-stage rf-stage" }, canvas, drum, flicker, winner);
+    const stageMsg = h("p", { class: "help", style: "text-align:center;margin:10px 0 0" });
+
+    const afterSel = h("select", { class: "rf-select" },
+      h("option", { value: "ticket" }, "Remove only the winning ticket"),
+      h("option", { value: "all" }, "Remove all of the winner's tickets"),
+      h("option", { value: "none" }, "Keep all tickets in the drum"));
+    afterSel.value = R.after;
+    afterSel.addEventListener("change", () => { R.after = afterSel.value; saveR(); });
+    const soundChk = h("input", { type: "checkbox" }); soundChk.checked = R.sound !== false;
+    soundChk.addEventListener("change", () => { R.sound = soundChk.checked; saveR(); });
+
+    const winList = h("ol", { class: "rf-winners" });
+    function drawWinners() {
+      winList.innerHTML = "";
+      if (!R.winners.length) { winList.appendChild(h("li", { class: "help", style: "list-style:none" }, "No winners drawn yet.")); return; }
+      R.winners.forEach(w => winList.appendChild(h("li", null, h("strong", null, w.name), h("span", null, ` — ticket #${w.ticket} (entry ${w.entry} of ${w.of})`))));
+    }
+
+    let drawing = false, lastRemoval = null;
+    function draw(isRedraw) {
+      if (drawing) return;
+      const tickets = [];
+      let num = 1;
+      R.entries.forEach(e => { for (let k = 1; k <= e.tickets; k++) tickets.push({ name: e.name, entry: k, of: e.tickets, ticket: num++ }); });
+      if (!tickets.length) { stageMsg.textContent = "Add some tickets first."; return; }
+      stageMsg.textContent = "";
+      drawing = true;
+      const mixed = shuffle(tickets);              // shuffle the whole drum…
+      const win = mixed[randInt(mixed.length)];    // …and pull one ticket out
+      winner.classList.add("hidden");
+      stage.classList.remove("won");
+      stage.classList.add("spinning");
+      if (soundChk.checked) Sound.drumroll(2.2);
+      let i = 0;
+      const t = setInterval(() => { flicker.textContent = mixed[i++ % mixed.length].name; }, 70);
+      setTimeout(() => {
+        clearInterval(t);
+        flicker.textContent = "";
+        stage.classList.remove("spinning");
+        stage.classList.add("won");
+        winner.innerHTML = "";
+        winner.append(
+          h("div", { class: "rf-ticket" },
+            h("div", { class: "rf-ticket-main" },
+              h("div", { class: "rf-ticket-label" }, "Winner"),
+              h("div", { class: "rf-ticket-name" }, win.name),
+              h("div", { class: "rf-ticket-meta" }, `Ticket #${win.ticket}` + (win.of > 1 ? ` · entry ${win.entry} of ${win.of}` : ""))),
+            h("div", { class: "rf-ticket-stub" }, h("span", null, "No."), h("strong", null, String(win.ticket)))));
+        winner.classList.remove("hidden");
+        Confetti.burst(canvas);
+        if (soundChk.checked) Sound.applause(4.5);
+        R.winners.push({ name: win.name, ticket: win.ticket, entry: win.entry, of: win.of });
+        // take tickets out of the drum as chosen
+        const e = R.entries.find(x => x.name === win.name);
+        lastRemoval = { name: win.name, removed: 0 };
+        if (e && R.after === "ticket") { e.tickets -= 1; lastRemoval.removed = 1; }
+        if (e && R.after === "all") { lastRemoval.removed = e.tickets; e.tickets = 0; }
+        R.entries = R.entries.filter(x => x.tickets > 0);
+        saveR(); drawEntries(); drawWinners();
+        drawing = false;
+      }, 2300);
+    }
+    function redraw() {
+      if (drawing || !R.winners.length || !lastRemoval) { draw(); return; }
+      R.winners.pop();                              // undo the last win, put its tickets back
+      if (lastRemoval.removed) addTickets(lastRemoval.name, lastRemoval.removed);
+      lastRemoval = null;
+      saveR(); drawEntries(); drawWinners();
+      draw(true);
+    }
+
+    const el = h("div", { class: "cr-view hidden" },
+      h("div", { class: "card" },
+        h("h2", { class: "section-title" }, "Raffle Tickets"),
+        h("p", { class: "help" }, "Add a name and how many tickets they get. The same name can have many tickets — each ticket is one more chance to win."),
+        sheetBtn, sheetMsg, sheetBox,
+        h("p", { class: "rf-or" }, "or add by hand"),
+        h("div", { class: "rf-form" }, nameIn, h("span", { class: "rf-times" }, "×"), countIn,
+          h("button", { type: "button", class: "button", onclick: addFromForm }, "Add tickets")),
+        formMsg,
+        h("div", { class: "actions", style: "margin-top:4px" },
+          h("button", { type: "button", class: "small-btn", onclick: () => {
+            const kids = present();
+            if (!kids.length) { formMsg.className = "status err"; formMsg.textContent = "Add students on the Students page first."; return; }
+            kids.forEach(k => addTickets(k, 1)); saveR(); drawEntries();
+            formMsg.className = "status ok"; formMsg.textContent = `✓ Added 1 ticket for each of ${kids.length} students.`;
+          } }, "+ 1 ticket for every student here"),
+          h("button", { type: "button", class: "small-btn danger", onclick: () => { if (R.entries.length && confirm("Take all tickets out of the drum?")) { R.entries = []; saveR(); drawEntries(); } } }, "Clear all tickets")),
+        h("div", { class: "cr-row", style: "margin-top:14px" }, h("span", { class: "label-text", style: "margin:0" }, "In the drum"), totalEl),
+        list),
+      h("div", { class: "card" },
+        h("h2", { class: "section-title" }, "The Draw"),
+        stage, stageMsg,
+        h("div", { class: "actions", style: "justify-content:center" },
+          h("button", { type: "button", class: "button cr-go", onclick: () => draw() }, "Shuffle & draw a winner"),
+          h("button", { type: "button", class: "button secondary", onclick: redraw, title: "Put the last winner's ticket back and draw again" }, "Redraw"),
+          fullscreenBtn(stage, [["Shuffle & draw a winner", () => draw(), true], ["Redraw", redraw]])),
+        h("div", { class: "rf-options" },
+          h("label", { class: "rf-opt" }, "After a win: ", afterSel),
+          h("label", { class: "check-line", style: "margin:0" }, soundChk, " Sound (drumroll & applause)"))),
+      h("div", { class: "card" },
+        h("div", { class: "cr-row" }, h("h2", { class: "section-title", style: "margin:0" }, "Winners"),
+          h("span", { class: "actions", style: "margin:0" },
+            printBtn("Print winners", () => {
+              if (!R.winners.length) { stageMsg.textContent = "Draw a winner first, then print."; return; }
+              printSheet("Raffle Winners", `${R.winners.length} winner${R.winners.length === 1 ? "" : "s"}, in the order drawn`,
+                printList(R.winners.map(w => `${w.name} — ticket #${w.ticket}`)));
+            }),
+            h("button", { type: "button", class: "small-btn danger", onclick: () => { if (R.winners.length && confirm("Clear the winners list?")) { R.winners = []; lastRemoval = null; saveR(); drawWinners(); } } }, "Clear winners"))),
+        winList));
+    drawEntries(); drawWinners();
+    return { el };
+  }
+
+  /* raffle drum: navy cage with gold rim, tickets inside, crank and stand */
+  const DRUM_SVG = `<svg viewBox="0 0 260 210" aria-hidden="true">
+    <defs><radialGradient id="rfShine" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#2b4470"/><stop offset="1" stop-color="#14213d"/></radialGradient></defs>
+    <path d="M70 196l26-60M190 196l-26-60" stroke="#b8955a" stroke-width="6" stroke-linecap="round"/>
+    <rect x="52" y="192" width="156" height="10" rx="5" fill="#b8955a"/>
+    <g class="rf-wheel">
+      <circle cx="130" cy="104" r="78" fill="url(#rfShine)" stroke="#c9a96a" stroke-width="6"/>
+      <circle cx="130" cy="104" r="64" fill="none" stroke="#c9a96a" stroke-opacity=".35" stroke-width="1.5"/>
+      <g stroke="#c9a96a" stroke-width="2" stroke-opacity=".55">
+        <path d="M130 26v156M52 104h156M75 49l110 110M185 49L75 159"/>
+      </g>
+      <g stroke="#14213d" stroke-width="1">
+        <rect x="96" y="76" width="34" height="16" rx="2" fill="#e3c88f" transform="rotate(-18 113 84)"/>
+        <rect x="132" y="88" width="34" height="16" rx="2" fill="#d4b375" transform="rotate(24 149 96)"/>
+        <rect x="104" y="112" width="34" height="16" rx="2" fill="#f3e6c4" transform="rotate(8 121 120)"/>
+        <rect x="140" y="122" width="34" height="16" rx="2" fill="#e3c88f" transform="rotate(-30 157 130)"/>
+        <rect x="88" y="98" width="30" height="14" rx="2" fill="#d4b375" transform="rotate(40 103 105)"/>
+        <rect x="124" y="58" width="30" height="14" rx="2" fill="#f3e6c4" transform="rotate(-6 139 65)"/>
+      </g>
+      <circle cx="130" cy="104" r="9" fill="#c9a96a"/>
+    </g>
+    <path d="M208 104h22v-26" fill="none" stroke="#c9a96a" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="230" cy="74" r="7" fill="#e3c88f"/>
+  </svg>`;
+
+  /* gold confetti burst (classy: gold, cream, navy) */
+  const Confetti = {
+    burst(canvas) {
+      if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      const box = canvas.parentElement.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = box.width * dpr; canvas.height = box.height * dpr;
+      const ctx = canvas.getContext("2d"); ctx.scale(dpr, dpr);
+      const colors = ["#c9a96a", "#e3c88f", "#f3e6c4", "#b8955a", "#14213d", "#ffffff"];
+      const parts = Array.from({ length: 140 }, () => ({
+        x: box.width / 2 + (Math.random() - .5) * 60, y: box.height * .45,
+        vx: (Math.random() - .5) * 11, vy: -Math.random() * 11 - 4,
+        w: 5 + Math.random() * 6, h: 8 + Math.random() * 8, r: Math.random() * 6, vr: (Math.random() - .5) * .3,
+        c: colors[(Math.random() * colors.length) | 0]
+      }));
+      const start = performance.now();
+      (function frame(now) {
+        const t = now - start;
+        ctx.clearRect(0, 0, box.width, box.height);
+        parts.forEach(p => {
+          p.vy += .28; p.vx *= .99; p.x += p.vx; p.y += p.vy; p.r += p.vr;
+          ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r);
+          ctx.globalAlpha = Math.max(0, 1 - t / 3200);
+          ctx.fillStyle = p.c; ctx.fillRect(-p.w / 2, -p.h / 2, p.w, Math.cos(p.r * 3) * p.h);
+          ctx.restore();
+        });
+        if (t < 3200) requestAnimationFrame(frame); else ctx.clearRect(0, 0, box.width, box.height);
+      })(start);
+    }
+  };
+
+  /* sounds made by the browser (no files, works offline): drumroll and applause */
+  const Sound = {
+    ctx: null,
+    get() {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      if (!this.ctx) this.ctx = new AC();
+      if (this.ctx.state === "suspended") this.ctx.resume();
+      return this.ctx;
+    },
+    noise(ac) {
+      const len = ac.sampleRate * 0.2, buf = ac.createBuffer(1, len, ac.sampleRate), d = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      return buf;
+    },
+    hit(ac, buf, when, freq, q, gain, decay) {
+      const src = ac.createBufferSource(); src.buffer = buf;
+      const f = ac.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = freq; f.Q.value = q;
+      const g = ac.createGain();
+      g.gain.setValueAtTime(0, when);
+      g.gain.linearRampToValueAtTime(gain, when + 0.003);
+      g.gain.exponentialRampToValueAtTime(0.0008, when + decay);
+      src.connect(f); f.connect(g); g.connect(ac.destination);
+      src.start(when); src.stop(when + decay + 0.02);
+    },
+    drumroll(sec) {
+      const ac = this.get(); if (!ac) return;
+      const buf = this.noise(ac), t0 = ac.currentTime + 0.02;
+      for (let t = 0; t < sec; t += 0.045) this.hit(ac, buf, t0 + t, 180 + Math.random() * 60, 1.2, 0.12 + 0.18 * (t / sec), 0.06);
+    },
+    applause(sec) {                                  // many people clapping, swelling then fading
+      const ac = this.get(); if (!ac) return;
+      const buf = this.noise(ac), t0 = ac.currentTime + 0.05;
+      const people = 24;
+      for (let p = 0; p < people; p++) {
+        const rate = 3.2 + Math.random() * 2.2;       // claps per second for this person
+        const tone = 900 + Math.random() * 1700;      // each pair of hands sounds a bit different
+        let t = Math.random() * 0.3;
+        while (t < sec) {
+          const env = Math.min(1, t / 0.5) * Math.max(0, 1 - Math.max(0, t - sec * 0.55) / (sec * 0.45));
+          if (env > 0.02) this.hit(ac, buf, t0 + t, tone, 1.4, 0.09 * env, 0.05 + Math.random() * 0.03);
+          t += 1 / rate + (Math.random() - 0.5) * 0.06;
+        }
+      }
+    }
+  };
 
   window.Classroom = { open, _test: { rowsToNames, detectColumns, namesFromColumns, cleanRows, parseDelimited, readXlsx, shuffle, randInt } };
 })();

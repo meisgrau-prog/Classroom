@@ -25,6 +25,7 @@ Switch between **Website** (edit the site) and **Classroom** (teacher tools):
   The list is saved only in that browser on that device — never on GitHub or the website.
 - **Group Maker:** choose how many groups; uneven numbers give some groups one extra student. Every tool has a **Print** button (groups, number picks, student picks, student order) that prints a clean sheet.
 - **Random Number:** quick ranges (1–6 up to 1–10,000) or any range up to 10,000; optional "no repeats". The newest pick shows big; earlier picks stay listed in order (1, 2, 3…).
+- **Raffle:** upload an Excel sheet of names and ticket counts, or add names by hand with any number of tickets (same name can have many), shuffle & draw with drum, gold winner ticket, confetti, drumroll and applause; redraw, winners list, print.
 - **Random Student:** pick one student (everyone gets a turn before repeats) or shuffle the whole order.
 
 ### First-time setup (or forgot the password / GitHub key expired)
