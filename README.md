@@ -1,17 +1,30 @@
 # Rabbi Eisgrau's Class Website
 
-## Pages
-- **Home page** (`index.html`) – welcome, section buttons on the side, Contact Me bar at the bottom
-- (`menu.html` now just forwards to the home page)
-- **Classwork** – a Classwork page with a side menu of up to 7 sections (named and switched on/off in the portal)
-- **Homework** – preview and download posted documents
-- **Programs** – programs currently running in class
-- **News** – announcements (headline + subtitle, click to open). The News button shows a small number for new items
-- **Contact Me** – call button and an email form
-- **Teacher Portal** (`portal.html`) – where you make changes
+## How the site is organized
+- **Main site** (`index.html`, your web address): welcome page with a **Parent Portal** button and a
+  **Teacher Menu** with: **Parent Portal Controls** (the Teacher Portal, password protected),
+  **Teacher Tools** (Prize Boxes) and **Classroom Tools** (students, groups, random picks, raffle).
+- **Parent Portal** (`parents.html`, also reachable at **/parents**): Classwork, Homework, News,
+  Programs and Contact. It has no links to the teacher side. Give families this address.
+- **Parent Portal access** (Teacher Portal → Site Settings → "Who can open the Parent Portal?"): Open to everyone, Class password, or Parent profiles.
+- **Locks:** the main site, Classroom Tools and Teacher Tools ask for your **Teacher Portal password**.
+  The Parent Portal pages use the **website password** (switch it on/off in the portal).
+
+## Teacher Tools
+- **Prize Boxes:** add prizes with how many of each (type "Pencil × 10", paste a list like "3 x Stickers",
+  or upload an Excel sheet). Four numbered gift boxes each hide a random prize; click one to open it.
+  That prize is taken off the list. "New round" refills the boxes; "Show the other boxes" peeks.
+  Prizes given out can be printed. Saved only in that browser on that device.
+
+## Parent profiles (optional)
+Parents can each have their own profile (email + password) instead of one class password, with
+"Forgot password?" emailing a reset link. It uses Google Firebase (free). Set it up once in the
+portal: Site Settings → **Parent Profiles** (step-by-step instructions are there), then switch it on.
+Parents create a profile with the class code (your website password). Remove a parent in Firebase →
+Authentication → Users.
 
 ## Using the Teacher Portal
-Click the small 🔒 at the bottom of the home page (or open /portal.html).
+Open the main site → **Teacher Menu** → **Parent Portal Controls** (or go to /portal.html).
 
 Sign in with the **portal password**. (Backup: "Sign in with GitHub key instead".)
 - **Site Settings:** teacher name, welcome message, and the website lock (password + on/off switch).
@@ -40,6 +53,10 @@ people you trust. Change it with **Change password** (top right of the portal).
 ## Important when uploading files by hand
 Never upload `content.json` or `portal-key.json` — the portal manages them, and
 uploading an old copy would erase your posts or password.
+
+## Home page picture
+The home page shows a slowly moving picture of classroom desks. To use your own photo instead,
+upload a picture named **home-photo.jpg** to the repository; it will appear with the same slow movement.
 
 ## Other settings
 `data.js` holds the contact email, phone number and default teacher name.

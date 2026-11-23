@@ -53,6 +53,7 @@
     groups: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5"/></svg>',
     number: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1.2" fill="currentColor"/><circle cx="16" cy="8" r="1.2" fill="currentColor"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/><circle cx="8" cy="16" r="1.2" fill="currentColor"/><circle cx="16" cy="16" r="1.2" fill="currentColor"/></svg>',
     student: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/></svg>',
+    prizes: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="9" width="18" height="12" rx="1.5"/><path d="M2 6h20v3H2zM12 6v15"/><path d="M12 6c-1.5-3.5-6-3.5-5.5-1 .3 1.5 3 1 5.5 1zM12 6c1.5-3.5 6-3.5 5.5-1-.3 1.5-3 1-5.5 1z"/></svg>',
     raffle: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 0 2-2h14a2 2 0 0 0 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 0-2 2H5a2 2 0 0 0-2-2v-2a2 2 0 0 0 0-4z"/><path d="M15 6v12" stroke-dasharray="1.5 2"/><path d="M7.5 10.5h4M7.5 13.5h3"/></svg>',
     full: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>'
   };
@@ -199,9 +200,11 @@
   let current = "students";
   const views = {};
 
-  function open(container) {
+  let OPTS = {};
+  function open(container, options) {
     if (!root) {
       root = container;
+      OPTS = options || {};
       load();
       build();
     }
@@ -211,28 +214,28 @@
   function build() {
     root.innerHTML = "";
     root.appendChild(h("div", { class: "card cr-head" },
-      h("h1", { class: "page-title" }, "Classroom"),
-      h("p", { class: "help", style: "margin:0" }, "Teacher tools for class. Nothing here is posted on the website.")
+      h("h1", { class: "page-title" }, OPTS.heading || "Classroom"),
+      h("p", { class: "help", style: "margin:0" }, OPTS.sub || "Teacher tools for class. Nothing here is posted on the website.")
     ));
-    const tools = [
-      ["students", "Students", ICON.students],
-      ["groups", "Group Maker", ICON.groups],
-      ["number", "Random Number", ICON.number],
-      ["picker", "Random Student", ICON.student],
-      ["raffle", "Raffle", ICON.raffle]
-    ];
-    const menu = h("nav", { class: "cr-menu", "aria-label": "Classroom tools" });
-    tools.forEach(([key, label, icon]) => {
+    const all = {
+      students: ["Students", ICON.students, studentsView],
+      groups: ["Group Maker", ICON.groups, groupsView],
+      number: ["Random Number", ICON.number, numberView],
+      picker: ["Random Student", ICON.student, pickerView],
+      raffle: ["Raffle", ICON.raffle, raffleView],
+      prizes: ["Prize Boxes", ICON.prizes, prizesView]
+    };
+    const keys = OPTS.tools || ["students", "groups", "number", "picker", "raffle"];
+    const menu = h("nav", { class: "cr-menu", "aria-label": "Tools" });
+    menu.style.gridTemplateColumns = `repeat(${Math.min(5, Math.max(keys.length, 2))}, minmax(0, 1fr))`;
+    keys.forEach(key => {
+      const [label, icon] = all[key];
       menu.appendChild(h("button", { type: "button", class: "cr-tool", "data-tool": key, onclick: () => show(key) },
         h("span", { class: "cr-tool-icon", html: icon }), h("span", null, label)));
     });
     root.appendChild(menu);
-    views.students = studentsView();
-    views.groups = groupsView();
-    views.number = numberView();
-    views.picker = pickerView();
-    views.raffle = raffleView();
-    Object.values(views).forEach(v => root.appendChild(v.el));
+    keys.forEach(key => { views[key] = all[key][2](); root.appendChild(views[key].el); });
+    if (!keys.includes(current)) current = keys[0];
     show(current);
   }
   function show(key) {
@@ -656,6 +659,197 @@
   }
 
 
+  /* ---------- Prize Boxes ---------- */
+  const PRIZE_STORE = "teacher_prizes_v1";
+  function parsePrizeLine(line) {           // "Pencil", "3 x Pencil", "Pencil x3", "Pencil × 3", "Pencil, 3"
+    let t = String(line || "").replace(/\s+/g, " ").trim();
+    if (!t) return null;
+    let m;
+    if ((m = /^(\d{1,4})\s*[x×*]\s*(.+)$/i.exec(t))) return { name: m[2].trim(), qty: +m[1] };
+    if ((m = /^(.+?)\s*[x×*]\s*(\d{1,4})$/i.exec(t))) return { name: m[1].trim(), qty: +m[2] };
+    if ((m = /^(.+?)\s*[,;\t]\s*(\d{1,4})$/.exec(t))) return { name: m[1].trim(), qty: +m[2] };
+    return { name: t, qty: 1 };
+  }
+  function prizesView() {
+    let P = { prizes: [], given: [], boxes: [], opened: -1, peek: false, sound: true };
+    try { const s = JSON.parse(localStorage.getItem(PRIZE_STORE) || "null"); if (s && Array.isArray(s.prizes)) P = Object.assign(P, s); } catch {}
+    const saveP = () => { try { localStorage.setItem(PRIZE_STORE, JSON.stringify(P)); } catch {} };
+    const left = () => P.prizes.reduce((n, p) => n + p.qty, 0);
+    function addPrize(name, qty) {
+      name = String(name || "").replace(/\s+/g, " ").trim();
+      qty = Math.max(1, Math.min(999, parseInt(qty, 10) || 1));
+      if (!name) return false;
+      const f = P.prizes.find(p => p.name.toLowerCase() === name.toLowerCase());
+      if (f) f.qty += qty; else P.prizes.push({ name, qty });
+      return true;
+    }
+
+    /* add by hand */
+    const nameIn = h("input", { type: "text", placeholder: "Prize (e.g. Pencil)", class: "rf-name" });
+    const qtyIn = h("input", { type: "number", min: "1", max: "999", value: "1", class: "cr-num", "aria-label": "How many" });
+    const formMsg = h("p", { class: "status" });
+    const quick = h("span", { class: "pz-quick" });
+    [1, 5, 10, 20].forEach(n => quick.appendChild(h("button", { type: "button", class: "small-btn", onclick: () => { qtyIn.value = n; } }, "×" + n)));
+    function addFromForm() {
+      if (!addPrize(nameIn.value, qtyIn.value)) { formMsg.className = "status err"; formMsg.textContent = "Type a prize first."; return; }
+      formMsg.className = "status"; formMsg.textContent = ""; nameIn.value = ""; qtyIn.value = "1"; nameIn.focus();
+      saveP(); drawList(); fillIfEmpty();
+    }
+    [nameIn, qtyIn].forEach(i => i.addEventListener("keydown", e => { if (e.key === "Enter") addFromForm(); }));
+
+    /* paste a list */
+    const paste = h("textarea", { class: "pz-paste", rows: "4", placeholder: "Paste a list, one prize per line. Add how many like:\n3 x Stickers\nBookmark, 5\nHomework pass x2" });
+    const pasteBtn = h("button", { type: "button", class: "button secondary", onclick: () => {
+      const items = paste.value.split("\n").map(parsePrizeLine).filter(Boolean);
+      if (!items.length) { formMsg.className = "status err"; formMsg.textContent = "Paste at least one prize."; return; }
+      items.forEach(i => addPrize(i.name, i.qty));
+      formMsg.className = "status ok"; formMsg.textContent = `✓ Added ${items.reduce((a, i) => a + i.qty, 0)} prizes (${items.length} kinds).`;
+      paste.value = ""; saveP(); drawList(); fillIfEmpty();
+    } }, "Add pasted list");
+
+    /* upload a sheet: prize column + optional how-many column */
+    const sheetInput = h("input", { type: "file", accept: ".xlsx,.xlsm,.csv,.txt,.tsv,.xls" });
+    const sheetBtn = h("label", { class: "cr-upload rf-upload" },
+      h("span", { class: "cr-upload-icon", html: ICON.prizes }),
+      h("span", null, h("strong", null, "Upload Excel sheet of prizes"), h("small", null, "A prize column and (optional) how-many column — Excel, CSV or text")),
+      sheetInput);
+    async function useSheet(file) {
+      try {
+        const rows = await readSheetRows(file);
+        if (!rows.length) throw new Error("That sheet is empty.");
+        const head = rows[0].map(c => c.toLowerCase());
+        const nameCol = Math.max(0, head.findIndex(c => /prize|item|gift|reward|name/.test(c)));
+        let qtyCol = head.findIndex(c => /qty|quantity|how many|count|amount|number|#|total/.test(c));
+        const hasHead = head.some(c => /prize|item|gift|reward|name|qty|quantity|how many|count|amount/.test(c));
+        const body = hasHead ? rows.slice(1) : rows;
+        if (qtyCol < 0) { const w = Math.max(...body.map(r => r.length)); for (let k = 0; k < w; k++) if (k !== nameCol && body.filter(r => /^\d{1,4}$/.test(r[k] || "")).length >= body.length * 0.6) { qtyCol = k; break; } }
+        let kinds = 0, total = 0;
+        body.forEach(r => {
+          const name = r[nameCol]; if (!name) return;
+          const q = qtyCol >= 0 ? parseInt(r[qtyCol], 10) : 1;
+          if (!Number.isFinite(q) || q < 1) return;
+          if (addPrize(name, q)) { kinds++; total += Math.min(q, 999); }
+        });
+        if (!kinds) throw new Error("No prizes found in that sheet.");
+        saveP(); drawList(); fillIfEmpty();
+        formMsg.className = "status ok"; formMsg.textContent = `✓ Added ${total} prizes (${kinds} kinds) from ${file.name}.`;
+      } catch (e) { formMsg.className = "status err"; formMsg.textContent = e.message || "Couldn't read that file."; }
+    }
+    sheetInput.addEventListener("change", () => { if (sheetInput.files[0]) useSheet(sheetInput.files[0]); sheetInput.value = ""; });
+    sheetBtn.addEventListener("dragover", e => { e.preventDefault(); sheetBtn.classList.add("drag"); });
+    sheetBtn.addEventListener("dragleave", () => sheetBtn.classList.remove("drag"));
+    sheetBtn.addEventListener("drop", e => { e.preventDefault(); sheetBtn.classList.remove("drag"); if (e.dataTransfer.files[0]) useSheet(e.dataTransfer.files[0]); });
+
+    /* prize list */
+    const list = h("div", { class: "rf-list" });
+    const totalEl = h("span", { class: "cr-count" });
+    function drawList() {
+      list.innerHTML = "";
+      const t = left();
+      totalEl.textContent = `${t} prize${t === 1 ? "" : "s"} left · ${P.prizes.length} kind${P.prizes.length === 1 ? "" : "s"}`;
+      if (!P.prizes.length) { list.appendChild(h("p", { class: "help", style: "margin:6px 0" }, "No prizes yet. Add some above.")); return; }
+      P.prizes.forEach((p, i) => {
+        const step = d => () => { p.qty += d; if (p.qty < 1) P.prizes.splice(i, 1); saveP(); drawList(); };
+        list.appendChild(h("div", { class: "rf-row pz-row" },
+          h("span", { class: "rf-row-name" }, p.name),
+          h("span", { class: "rf-stepper" },
+            h("button", { type: "button", "aria-label": "One less " + p.name, onclick: step(-1) }, "−"),
+            h("strong", null, String(p.qty)),
+            h("button", { type: "button", "aria-label": "One more " + p.name, onclick: step(1) }, "+")),
+          h("button", { type: "button", class: "rf-x", "aria-label": "Remove " + p.name, onclick: () => { P.prizes.splice(i, 1); saveP(); drawList(); } }, "×")));
+      });
+    }
+
+    /* the four boxes */
+    const boxesEl = h("div", { class: "pz-boxes" });
+    const canvas = h("canvas", { class: "rf-confetti" });
+    const stageMsg = h("p", { class: "pz-msg" });
+    const stage = h("div", { class: "cr-stage pz-stage" }, canvas, boxesEl, stageMsg);
+    const soundChk = h("input", { type: "checkbox" }); soundChk.checked = P.sound !== false;
+    soundChk.addEventListener("change", () => { P.sound = soundChk.checked; saveP(); });
+    function newRound() {
+      const units = [];
+      P.prizes.forEach(p => { for (let k = 0; k < p.qty; k++) units.push(p.name); });
+      P.boxes = shuffle(units).slice(0, 4);
+      P.opened = -1; P.peek = false;
+      saveP(); drawBoxes();
+    }
+    function fillIfEmpty() { if (!P.boxes.length || (P.opened >= 0 && false)) newRound(); }
+    function drawBoxes() {
+      boxesEl.innerHTML = "";
+      stage.classList.toggle("revealed", P.opened >= 0);
+      if (!P.boxes.length) {
+        stageMsg.textContent = left() ? "Press “New round” to fill the boxes." : "Add prizes to fill the boxes.";
+        return;
+      }
+      stageMsg.textContent = P.opened >= 0 ? "" : "Pick a box!";
+      P.boxes.forEach((name, i) => {
+        const isOpen = P.opened === i, show = isOpen || (P.opened >= 0 && P.peek);
+        const box = h("button", { type: "button", class: "pz-box" + (isOpen ? " open" : "") + (P.opened >= 0 && !isOpen ? " other" : "") + (show && !isOpen ? " peek" : ""),
+          "aria-label": show ? `Box ${i + 1}: ${name}` : `Open box ${i + 1}`, disabled: P.opened >= 0 ? true : null,
+          onclick: () => openBox(i) },
+          h("span", { class: "pz-lid" }, h("span", { class: "pz-bow" })),
+          h("span", { class: "pz-body" }, h("span", { class: "pz-num" }, String(i + 1))),
+          h("span", { class: "pz-prize" }, h("small", null, isOpen ? "You won" : "Box " + (i + 1)), h("strong", null, show ? name : "")));
+        boxesEl.appendChild(box);
+      });
+    }
+    function openBox(i) {
+      if (P.opened >= 0 || !P.boxes[i]) return;
+      const name = P.boxes[i];
+      P.opened = i;
+      const p = P.prizes.find(x => x.name === name);
+      if (p) { p.qty -= 1; if (p.qty < 1) P.prizes.splice(P.prizes.indexOf(p), 1); }
+      P.given.push({ name, box: i + 1 });
+      saveP(); drawBoxes(); drawList(); drawGiven();
+      Confetti.burst(canvas);
+      if (soundChk.checked) Sound.chime();
+    }
+
+    const givenList = h("ol", { class: "rf-winners" });
+    function drawGiven() {
+      givenList.innerHTML = "";
+      if (!P.given.length) { givenList.appendChild(h("li", { class: "help", style: "list-style:none" }, "No prizes given out yet.")); return; }
+      P.given.forEach(g => givenList.appendChild(h("li", null, h("strong", null, g.name), h("span", null, ` — box ${g.box}`))));
+    }
+    const nextRound = () => { if (!left()) { stageMsg.textContent = "No prizes left. Add more prizes above."; P.boxes = []; P.opened = -1; saveP(); drawBoxes(); return; } newRound(); };
+    const peekBtn = () => { if (P.opened < 0) return; P.peek = true; saveP(); drawBoxes(); };
+
+    const el = h("div", { class: "cr-view hidden" },
+      h("div", { class: "card" },
+        h("h2", { class: "section-title" }, "Prizes"),
+        h("p", { class: "help" }, "Add each prize and how many you have. Every time a box is opened, that prize is taken off the list."),
+        h("div", { class: "rf-form" }, nameIn, h("span", { class: "rf-times" }, "×"), qtyIn, quick,
+          h("button", { type: "button", class: "button", onclick: addFromForm }, "Add prize")),
+        formMsg,
+        h("details", { class: "pz-more" }, h("summary", null, "Paste a list or upload an Excel sheet"),
+          paste, h("div", { class: "actions", style: "margin-top:8px" }, pasteBtn), sheetBtn),
+        h("div", { class: "cr-row", style: "margin-top:14px" }, h("span", { class: "label-text", style: "margin:0" }, "Prize list"), totalEl),
+        list,
+        h("div", { class: "actions" },
+          h("button", { type: "button", class: "small-btn danger", onclick: () => { if (P.prizes.length && confirm("Remove all prizes from the list?")) { P.prizes = []; P.boxes = []; P.opened = -1; saveP(); drawList(); drawBoxes(); } } }, "Clear all prizes"))),
+      h("div", { class: "card" },
+        h("h2", { class: "section-title" }, "Pick a Box"),
+        stage,
+        h("div", { class: "actions", style: "justify-content:center" },
+          h("button", { type: "button", class: "button cr-go", onclick: nextRound }, "New round"),
+          h("button", { type: "button", class: "button secondary", onclick: peekBtn }, "Show the other boxes"),
+          fullscreenBtn(stage, [["New round", nextRound, true], ["Show the other boxes", peekBtn]])),
+        h("div", { class: "rf-options" }, h("label", { class: "check-line", style: "margin:0" }, soundChk, " Sound"))),
+      h("div", { class: "card" },
+        h("div", { class: "cr-row" }, h("h2", { class: "section-title", style: "margin:0" }, "Prizes Given Out"),
+          h("span", { class: "actions", style: "margin:0" },
+            printBtn("Print list", () => {
+              if (!P.given.length) return;
+              printSheet("Prizes Given Out", `${P.given.length} prize${P.given.length === 1 ? "" : "s"}, in order`, printList(P.given.map(g => `${g.name} (box ${g.box})`)));
+            }),
+            h("button", { type: "button", class: "small-btn danger", onclick: () => { if (P.given.length && confirm("Clear the list of prizes given out?")) { P.given = []; saveP(); drawGiven(); } } }, "Clear list"))),
+        givenList));
+    drawList(); drawGiven();
+    if (!P.boxes.length && left()) newRound(); else drawBoxes();
+    return { el };
+  }
+
   /* ---------- Raffle ---------- */
   const RAFFLE_STORE = "classroom_raffle_v1";
   function raffleView() {
@@ -1025,6 +1219,17 @@
       const buf = this.noise(ac), t0 = ac.currentTime + 0.02;
       for (let t = 0; t < sec; t += 0.045) this.hit(ac, buf, t0 + t, 180 + Math.random() * 60, 1.2, 0.12 + 0.18 * (t / sec), 0.06);
     },
+    chime() {                                        // a short, bright "ta-da"
+      const ac = this.get(); if (!ac) return;
+      const t0 = ac.currentTime + 0.02;
+      [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
+        const o = ac.createOscillator(), g = ac.createGain();
+        o.type = "triangle"; o.frequency.value = f;
+        const t = t0 + i * 0.09;
+        g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.18, t + 0.02); g.gain.exponentialRampToValueAtTime(0.001, t + 0.9);
+        o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + 1);
+      });
+    },
     applause(sec) {                                  // many people clapping, swelling then fading
       const ac = this.get(); if (!ac) return;
       const buf = this.noise(ac), t0 = ac.currentTime + 0.05;
@@ -1042,5 +1247,5 @@
     }
   };
 
-  window.Classroom = { open, _test: { rowsToNames, detectColumns, namesFromColumns, cleanRows, parseDelimited, readXlsx, shuffle, randInt } };
+  window.Classroom = { open, _test: { parsePrizeLine, rowsToNames, detectColumns, namesFromColumns, cleanRows, parseDelimited, readXlsx, shuffle, randInt } };
 })();

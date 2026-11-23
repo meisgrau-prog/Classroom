@@ -750,6 +750,64 @@ function bannersPanel() {
   }
 }
 
+// One clear choice for Parent Portal access; it sets the website lock and parent-profile switches.
+function accessControls() {
+  const lock = content.settings.siteLock, pa = content.settings.parentAccounts, msg = $("access-msg");
+  const current = () => pa.on ? "profiles" : lock.on ? "password" : "open";
+  const radios = document.querySelectorAll('input[name="pp-access"]');
+  const show = () => {
+    const v = current();
+    radios.forEach(r => { r.checked = r.value === v; r.closest(".access-opt").classList.toggle("chosen", r.checked); });
+    msg.className = "status";
+    msg.textContent = v === "open" ? "The Parent Portal is unlocked — anyone with the address can open it."
+      : v === "password" ? (lock.hash ? "Families need the class password." : "Set a class password below, then Save & Publish.")
+      : (pa.apiKey ? "Parents sign in with their own profiles." : "Finish the Parent Profiles setup below, then Save & Publish.");
+    if ((v === "password" && !lock.hash) || (v === "profiles" && !pa.apiKey)) msg.className = "status err";
+  };
+  radios.forEach(r => r.onchange = () => {
+    if (r.value === "open") { lock.on = false; pa.on = false; }
+    if (r.value === "password") { lock.on = true; pa.on = false; }
+    if (r.value === "profiles") { pa.on = true; }
+    changed();
+    lockControls(); parentAccountControls(); show();
+  });
+  show();
+  window.__refreshAccess = show;
+}
+
+function parentAccountControls() {
+  const pa = content.settings.parentAccounts;
+  const on = $("pa-on"), state = $("pa-state"), key = $("pa-key"), proj = $("pa-project"), code = $("pa-code"), msg = $("pa-msg"), users = $("pa-users");
+  const sync = () => {
+    state.textContent = pa.on ? "On" : "Off";
+    users.href = pa.projectId ? `https://console.firebase.google.com/project/${encodeURIComponent(pa.projectId)}/authentication/users` : "https://console.firebase.google.com/";
+    if (pa.on && !pa.apiKey) { msg.className = "status err"; msg.textContent = "Paste your Firebase Web API key before saving (setup steps below)."; }
+    else if (pa.on && pa.requireCode && !content.settings.siteLock.hash) { msg.className = "status err"; msg.textContent = "Set a website password above — it's the class code parents type when creating a profile."; }
+    else if (!msg.dataset.keep) { msg.className = "status"; msg.textContent = pa.on ? "Parents sign in with their own profiles." : "Off — the Parent Portal uses the one class password (if the lock is on)."; }
+  };
+  on.checked = !!pa.on; key.value = pa.apiKey || ""; proj.value = pa.projectId || ""; code.checked = pa.requireCode !== false;
+  on.onchange = () => { pa.on = on.checked; changed(); delete msg.dataset.keep; sync(); if (window.__refreshAccess) window.__refreshAccess(); };
+  key.oninput = () => { pa.apiKey = key.value.trim(); changed(); delete msg.dataset.keep; sync(); };
+  proj.oninput = () => { pa.projectId = proj.value.trim(); changed(); sync(); };
+  code.onchange = () => { pa.requireCode = code.checked; changed(); delete msg.dataset.keep; sync(); };
+  $("pa-test").onclick = async () => {
+    msg.dataset.keep = "1";
+    if (!pa.apiKey) { msg.className = "status err"; msg.textContent = "Paste the Web API key first."; return; }
+    msg.className = "status"; msg.textContent = "Testing…";
+    ParentAccounts._setKey(pa.apiKey);
+    try {
+      await ParentAccounts._call("accounts:signInWithPassword", { email: "connection-test@example.invalid", password: "x-test-only", returnSecureToken: true });
+      msg.className = "status ok"; msg.textContent = "✓ Connected to Firebase.";
+    } catch (e) {
+      if (["EMAIL_NOT_FOUND", "INVALID_LOGIN_CREDENTIALS", "INVALID_PASSWORD", "INVALID_EMAIL"].includes(e.code)) { msg.className = "status ok"; msg.textContent = "✓ Connected to Firebase. Email/password sign-in is ready."; }
+      else if (e.code === "OPERATION_NOT_ALLOWED") { msg.className = "status err"; msg.textContent = "Connected, but Email/Password sign-in is switched off. Turn it on in Firebase → Authentication → Sign-in method."; }
+      else if (/API_KEY|API key/i.test((e.raw || "") + e.code)) { msg.className = "status err"; msg.textContent = "That API key wasn't accepted. Copy the apiKey value again from Firebase Project settings."; }
+      else { msg.className = "status err"; msg.textContent = "Couldn't reach Firebase: " + e.message; }
+    }
+  };
+  sync();
+}
+
 function lockControls() {
   const lock = content.settings.siteLock;
   const on = $("lock-on"), state = $("lock-state"), msg = $("lock-msg");
@@ -762,7 +820,7 @@ function lockControls() {
       : "The website is open to everyone.";
   };
   on.checked = !!lock.on;
-  on.onchange = () => { lock.on = on.checked; changed(); status(); };
+  on.onchange = () => { lock.on = on.checked; changed(); status(); if (window.__refreshAccess) window.__refreshAccess(); };
   $("lock-set").onclick = async () => {
     const p1 = $("lock-pass").value, p2 = $("lock-pass2").value;
     msg.className = "status err";
@@ -792,6 +850,8 @@ function settingsControls() {
 function renderAll() {
   settingsControls();
   lockControls();
+  parentAccountControls();
+  accessControls();
   bannersPanel();
   classworkPanel();
   assignmentPanel("homework", true);
@@ -820,6 +880,12 @@ function allFileLists() {
 
 $("save-btn").addEventListener("click", async () => {
   const btn = $("save-btn"), msg = $("save-msg");
+  if (content.settings.parentAccounts.on && !content.settings.parentAccounts.apiKey) {
+    msg.className = "msg err";
+    msg.textContent = "Paste your Firebase Web API key (Parent Profiles) or switch Parent Profiles off before saving.";
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    return;
+  }
   if (content.settings.siteLock.on && !content.settings.siteLock.hash) {
     msg.className = "msg err";
     msg.textContent = "Set a website password (Site Settings) or turn the lock off before saving.";

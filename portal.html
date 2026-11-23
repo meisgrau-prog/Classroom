@@ -5,15 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
   <title>Teacher Portal – Rabbi Eisgrau</title>
-  <link rel="stylesheet" href="style.css?v=20261128">
-  <script src="data.js?v=20261128"></script>
-  <script src="common.js?v=20261128"></script>
+  <link rel="stylesheet" href="style.css?v=20261204">
+  <script src="data.js?v=20261204"></script>
+  <script src="common.js?v=20261204"></script>
 </head>
 <body class="portal">
   <header class="topbar">
     <span class="brand">Teacher Portal</span>
     <div class="top-actions">
-      <a class="back" href="index.html" target="_blank" rel="noopener">View site ↗</a>
+      <a class="back" href="index.html">Main site</a>
+      <a class="back" href="parents.html" target="_blank" rel="noopener">Parent Portal ↗</a>
       <button class="back hidden" id="changepw-open" type="button">Change password</button>
       <button class="back hidden" id="signout" type="button">Sign out</button>
     </div>
@@ -143,6 +144,19 @@
         </div>
         <p class="help" style="margin:0">The teacher name appears on the home page and at the top of every page.</p>
 
+        <div class="lock-box access-box">
+          <h3 class="section-title" style="font-size:1.3rem">Who can open the Parent Portal?</h3>
+          <div class="access-choices" role="radiogroup" aria-label="Parent Portal access">
+            <label class="access-opt"><input type="radio" name="pp-access" value="open">
+              <span><strong>Open to everyone</strong><small>No password. Anyone with the address can see the Parent Portal.</small></span></label>
+            <label class="access-opt"><input type="radio" name="pp-access" value="password">
+              <span><strong>Class password</strong><small>Families type one shared password (set below).</small></span></label>
+            <label class="access-opt"><input type="radio" name="pp-access" value="profiles">
+              <span><strong>Parent profiles</strong><small>Each parent signs in with their own email and password (set up below).</small></span></label>
+          </div>
+          <p class="status" id="access-msg"></p>
+        </div>
+
         <div class="lock-box">
           <div class="switch-row">
             <div>
@@ -170,6 +184,49 @@
           <button class="small-btn" id="lock-set" type="button">Set website password</button>
           <p class="status" id="lock-msg"></p>
           <p class="help">This is a privacy screen for families and students. Because the website is stored on public GitHub, a technical person could still find posted files there, so don't post anything truly confidential. Use a different password from the Teacher Portal password.</p>
+        </div>
+
+        <div class="lock-box" id="pa-box">
+          <div class="switch-row">
+            <div>
+              <h3 class="section-title" style="font-size:1.3rem">Parent Profiles</h3>
+              <p class="help" style="margin:0">When on, each parent signs in with their own email and password instead of the one class password, and can reset a forgotten password by email.</p>
+            </div>
+            <div class="row">
+              <span class="switch-state" id="pa-state">Off</span>
+              <label class="switch" aria-label="Parent profiles on or off">
+                <input type="checkbox" id="pa-on">
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="two" style="margin-top:14px">
+            <div class="field">
+              <label for="pa-key">Firebase Web API key</label>
+              <input type="text" id="pa-key" autocomplete="off" spellcheck="false" placeholder="AIza…">
+            </div>
+            <div class="field">
+              <label for="pa-project">Firebase Project ID</label>
+              <input type="text" id="pa-project" autocomplete="off" spellcheck="false" placeholder="e.g. rabbi-eisgrau-class">
+            </div>
+          </div>
+          <label class="check-line" style="font-weight:500 !important"><input type="checkbox" id="pa-code"> Parents must type the class code (your website password) to create a profile</label>
+          <div class="actions" style="margin-top:8px">
+            <button class="small-btn" id="pa-test" type="button">Test connection</button>
+            <a class="small-btn" id="pa-users" href="#" target="_blank" rel="noopener" style="text-decoration:none">See &amp; remove parents in Firebase ↗</a>
+          </div>
+          <p class="status" id="pa-msg"></p>
+          <details>
+            <summary>How to set up parent profiles (one time, about 10 minutes)</summary>
+            <ol class="steps">
+              <li>Go to <a href="https://console.firebase.google.com/" target="_blank" rel="noopener">console.firebase.google.com</a> and sign in with a Google account. Click <b>Create a project</b>, name it (e.g. <i>Rabbi Eisgrau Class</i>), and finish. Google Analytics can be off. The free plan is all you need.</li>
+              <li>In the left menu choose <b>Build → Authentication → Get started</b>. Under <b>Sign-in method</b>, choose <b>Email/Password</b>, switch it <b>on</b>, and <b>Save</b>.</li>
+              <li>Click the <b>gear ⚙ → Project settings</b>. Copy the <b>Project ID</b>. Under <b>Your apps</b>, click the <b>&lt;/&gt;</b> (Web) button, give it a nickname, and <b>Register app</b>. Copy the <b>apiKey</b> value (it starts with <code>AIza</code>).</li>
+              <li>Paste both above, click <b>Test connection</b>, switch Parent Profiles <b>on</b>, and click <b>Save &amp; Publish</b>.</li>
+              <li>Optional: in Authentication → <b>Templates</b> → <b>Password reset</b>, change the sender name to your name so families recognize the email.</li>
+            </ol>
+            <p class="help">Give families the Parent Portal address and the class code. To remove a parent, open “See &amp; remove parents”, find their email, and choose <b>Disable account</b> or <b>Delete account</b>. They're signed out on their next visit.</p>
+          </details>
         </div>
       </div>
 
@@ -201,7 +258,7 @@
     <button class="button" id="save-btn" type="button">Save &amp; Publish</button>
   </div>
 
-  <script src="portal.js?v=20261128"></script>
-  <script src="classroom.js?v=20261128"></script>
+  <script src="portal.js?v=20261204"></script>
+  <script src="classroom.js?v=20261204"></script>
 </body>
 </html>

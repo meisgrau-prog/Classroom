@@ -8,16 +8,21 @@ function applyNames(name, welcome) {
 }
 // Pages stay hidden until we know whether the site is locked (see showSiteGate).
 const IS_PORTAL = /portal\.html$/.test(location.pathname);
+// Locks: the Parent Portal pages use the website password (set in the portal, can be off);
+// the teacher side (main site, Classroom Tools, Teacher Tools) uses the Teacher Portal password.
+const TEACHER_PAGE = /(^|\/)(index\.html|classroom\.html|teacher-tools\.html)?$/.test(location.pathname);
+const NO_LOCK = IS_PORTAL || TEACHER_PAGE;
 if (!IS_PORTAL) document.documentElement.classList.add("gate-wait");
 
 document.addEventListener("DOMContentLoaded", () => {
   if (IS_PORTAL) return;
   applyNames(SITE.teacherName, SITE.welcome);
+  if (TEACHER_PAGE) checkTeacherLock();
   loadContent().then(async c => {
     applyNames(c.settings.teacherName, c.settings.welcome);
     showBanners(c);
-    await checkSiteLock(c);
-  }).catch(() => document.documentElement.classList.remove("gate-wait"));
+    if (!NO_LOCK) await checkSiteLock(c);
+  }).catch(() => { if (!TEACHER_PAGE) document.documentElement.classList.remove("gate-wait"); });
 });
 
 /* ---------------- Show/hide password (eye icon) ---------------- */
@@ -63,18 +68,31 @@ function readUnlock() {
 async function checkSiteLock(c) {
   const lock = c.settings.siteLock;
   const reveal = () => document.documentElement.classList.remove("gate-wait");
+  const pa = c.settings.parentAccounts;
+  if (pa && pa.on && pa.apiKey) return ParentAccounts.check(c, reveal);
   if (!lock || !lock.on || !lock.hash) return reveal();
   if (readUnlock() === lock.hash) return reveal();
   showSiteGate(c, lock, reveal);
 }
 function showSiteGate(c, lock, reveal) {
+  showGate({
+    title: c.settings.teacherName,
+    sub: "This class website is private. Please enter the password.",
+    check: async pw => { const h = await hashSitePassword(pw, lock.salt, lock.iterations); return h === lock.hash ? h : null; },
+    storeKey: UNLOCK_KEY,
+    reveal
+  });
+}
+
+// A full-screen password screen. `check(pw)` returns a value to remember, or null if wrong.
+function showGate(opt) {
   const gate = el("div", "site-gate");
   gate.setAttribute("role", "dialog");
   gate.setAttribute("aria-modal", "true");
   const box = el("form", "gate-box");
   box.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
-  box.appendChild(el("h1", "gate-title", c.settings.teacherName));
-  box.appendChild(el("p", "gate-sub", "This class website is private. Please enter the password."));
+  box.appendChild(el("h1", "gate-title", opt.title));
+  box.appendChild(el("p", "gate-sub", opt.sub));
   const input = el("input"); input.type = "password"; input.placeholder = "Password"; input.autocomplete = "current-password";
   input.setAttribute("aria-label", "Password");
   const remLab = el("label", "gate-remember");
@@ -83,6 +101,7 @@ function showSiteGate(c, lock, reveal) {
   const btn = el("button", "gate-btn", "Enter"); btn.type = "submit";
   const msg = el("p", "gate-msg");
   box.append(input, remLab, btn, msg);
+  if (opt.footer) box.appendChild(opt.footer);
   gate.appendChild(box);
   document.body.appendChild(gate);
   addPasswordToggles(gate);
@@ -93,12 +112,213 @@ function showSiteGate(c, lock, reveal) {
     if (!(window.crypto && crypto.subtle)) { msg.textContent = "Please open this site with https:// at the start of the address."; return; }
     btn.disabled = true; btn.textContent = "Checking…";
     try {
-      const h = await hashSitePassword(input.value, lock.salt, lock.iterations);
-      if (h !== lock.hash) { msg.textContent = "That password isn't right. Please try again."; input.select(); return; }
-      try { (rem.checked ? localStorage : sessionStorage).setItem(UNLOCK_KEY, h); } catch {}
+      const ok = await opt.check(input.value);
+      if (!ok) { msg.textContent = "That password isn't right. Please try again."; input.select(); return; }
+      try { (rem.checked ? localStorage : sessionStorage).setItem(opt.storeKey, ok); } catch {}
       gate.remove();
-      reveal();
-    } finally { btn.disabled = false; btn.textContent = "Enter"; }
+      opt.reveal();
+    } catch { msg.textContent = "That password isn't right. Please try again."; }
+    finally { btn.disabled = false; btn.textContent = "Enter"; }
+  });
+}
+
+/* ---------------- Parent accounts (Firebase Authentication, email + password) ----------------
+   Each parent makes a profile with their own password; "Forgot password?" emails a reset link.
+   Uses Firebase's public sign-in web service directly; only the web API key is needed. */
+const ParentAccounts = (() => {
+  const STORE = "classroom_parent_session";
+  const ERR = {
+    EMAIL_EXISTS: "There's already a profile with that email. Try signing in, or use “Forgot password?”.",
+    INVALID_EMAIL: "Please check the email address.",
+    WEAK_PASSWORD: "Please choose a password with at least 6 characters.",
+    EMAIL_NOT_FOUND: "That email or password isn't right.",
+    INVALID_PASSWORD: "That email or password isn't right.",
+    INVALID_LOGIN_CREDENTIALS: "That email or password isn't right.",
+    USER_DISABLED: "This profile has been turned off. Please contact the teacher.",
+    TOO_MANY_ATTEMPTS_TRY_LATER: "Too many tries. Please wait a few minutes and try again.",
+    MISSING_PASSWORD: "Please type a password.",
+    OPERATION_NOT_ALLOWED: "Parent sign-in isn't switched on yet. Please contact the teacher."
+  };
+  let apiKey = "";
+  async function call(path, body) {
+    const r = await fetch(`https://identitytoolkit.googleapis.com/v1/${path}?key=${encodeURIComponent(apiKey)}`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      const code = ((j.error && j.error.message) || "ERROR").split(" ")[0].split(":")[0];
+      const e = new Error(ERR[code] || "Something went wrong (" + code + "). Please try again."); e.code = code; e.raw = (j.error && j.error.message) || ""; throw e;
+    }
+    return j;
+  }
+  const read = () => { try { return JSON.parse(localStorage.getItem(STORE) || sessionStorage.getItem(STORE) || "null"); } catch { return null; } };
+  const save = (sess, remember) => { try { (remember ? localStorage : sessionStorage).setItem(STORE, JSON.stringify(sess)); } catch {} };
+  const clear = () => { try { localStorage.removeItem(STORE); sessionStorage.removeItem(STORE); } catch {} };
+
+  // A saved session is checked with Firebase, so a removed or turned-off profile is signed out.
+  async function stillValid(sess) {
+    try {
+      const r = await fetch(`https://securetoken.googleapis.com/v1/token?key=${encodeURIComponent(apiKey)}`, {
+        method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: "grant_type=refresh_token&refresh_token=" + encodeURIComponent(sess.refreshToken)
+      });
+      if (r.ok) { const j = await r.json(); sess.refreshToken = j.refresh_token || sess.refreshToken; sess.idToken = j.id_token || sess.idToken; return true; }
+      return false;
+    } catch { return true; }          // offline: let them in with their saved session
+  }
+
+  function badge(sess) {
+    const pill = el("div", "parent-pill");
+    const b = el("button", "parent-pill-btn");
+    b.type = "button";
+    b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>';
+    b.appendChild(el("span", null, sess.name || sess.email));
+    const menu = el("div", "parent-pill-menu hidden");
+    menu.appendChild(el("p", "parent-pill-email", sess.email));
+    const out = el("button", "small-btn", "Sign out"); out.type = "button";
+    out.addEventListener("click", () => { clear(); location.reload(); });
+    const pw = el("button", "small-btn", "Change password"); pw.type = "button";
+    pw.addEventListener("click", async () => {
+      try { await call("accounts:sendOobCode", { requestType: "PASSWORD_RESET", email: sess.email }); alert("We emailed you a link to choose a new password: " + sess.email); }
+      catch (e) { alert(e.message); }
+    });
+    menu.append(pw, out);
+    b.addEventListener("click", () => menu.classList.toggle("hidden"));
+    document.addEventListener("click", e => { if (!pill.contains(e.target)) menu.classList.add("hidden"); });
+    pill.append(b, menu);
+    document.body.appendChild(pill);
+  }
+
+  async function check(c, reveal) {
+    const pa = c.settings.parentAccounts;
+    apiKey = pa.apiKey;
+    const sess = read();
+    if (sess && sess.refreshToken && await stillValid(sess)) { badge(sess); return reveal(); }
+    if (sess) clear();
+    showLogin(c, reveal);
+  }
+
+  function showLogin(c, reveal) {
+    const pa = c.settings.parentAccounts, lock = c.settings.siteLock;
+    const needCode = pa.requireCode && lock && lock.hash;
+    const gate = el("div", "site-gate");
+    gate.setAttribute("role", "dialog"); gate.setAttribute("aria-modal", "true");
+    const box = el("form", "gate-box parent-box");
+    gate.appendChild(box);
+    document.body.appendChild(gate);
+    const field = (type, ph, ac) => { const i = el("input"); i.type = type; i.placeholder = ph; i.setAttribute("aria-label", ph); if (ac) i.autocomplete = ac; return i; };
+    const link = (text, fn) => { const a = el("button", "gate-link", text); a.type = "button"; a.addEventListener("click", fn); return a; };
+    const links = (...items) => { const d = el("div", "gate-links"); d.append(...items); return d; };
+    let mode = "signin";
+    function render() {
+      box.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>';
+      box.appendChild(el("h1", "gate-title", c.settings.teacherName));
+      const msg = el("p", "gate-msg");
+      const btn = el("button", "gate-btn"); btn.type = "submit";
+      const rem = el("input"); rem.type = "checkbox";
+      const remLab = el("label", "gate-remember"); remLab.append(rem, document.createTextNode(" Keep me signed in on this device"));
+      let submit;
+      if (mode === "signin") {
+        box.appendChild(el("p", "gate-sub", "Parent Portal — sign in to your profile."));
+        const email = field("email", "Email", "email"), pw = field("password", "Password", "current-password");
+        btn.textContent = "Sign in";
+        box.append(email, pw, remLab, btn, msg,
+          links(link("Forgot password?", () => { mode = "forgot"; render(); }), link("Create a profile", () => { mode = "signup"; render(); })));
+        submit = async () => {
+          const j = await call("accounts:signInWithPassword", { email: email.value.trim(), password: pw.value, returnSecureToken: true });
+          save({ email: j.email, name: j.displayName || "", refreshToken: j.refreshToken, idToken: j.idToken }, rem.checked);
+          gate.remove(); badge({ email: j.email, name: j.displayName }); reveal();
+        };
+        setTimeout(() => email.focus(), 0);
+      } else if (mode === "signup") {
+        box.appendChild(el("p", "gate-sub", "Create your Parent Portal profile with your own password."));
+        const name = field("text", "Your name", "name"), child = field("text", "Your child's name", "off");
+        const email = field("email", "Email", "email"), pw = field("password", "Choose a password (6+ characters)", "new-password"), pw2 = field("password", "Type the password again", "new-password");
+        const code = needCode ? field("password", "Class code (from the teacher)", "off") : null;
+        btn.textContent = "Create profile";
+        box.append(name, child, email, pw, pw2); if (code) box.appendChild(code);
+        box.append(remLab, btn, msg, links(link("I already have a profile", () => { mode = "signin"; render(); })));
+        submit = async () => {
+          if (!name.value.trim()) throw new Error("Please type your name.");
+          if (pw.value !== pw2.value) throw new Error("The two passwords don't match.");
+          if (code) {
+            const h = await hashSitePassword(code.value, lock.salt, lock.iterations);
+            if (h !== lock.hash) throw new Error("That class code isn't right. Please ask the teacher for it.");
+          }
+          const j = await call("accounts:signUp", { email: email.value.trim(), password: pw.value, returnSecureToken: true });
+          const display = name.value.trim() + (child.value.trim() ? ` (parent of ${child.value.trim()})` : "");
+          const u = await call("accounts:update", { idToken: j.idToken, displayName: display, returnSecureToken: true }).catch(() => ({}));
+          save({ email: j.email, name: display, refreshToken: u.refreshToken || j.refreshToken, idToken: u.idToken || j.idToken }, rem.checked);
+          gate.remove(); badge({ email: j.email, name: display }); reveal();
+        };
+        setTimeout(() => name.focus(), 0);
+      } else {
+        box.appendChild(el("p", "gate-sub", "Forgot your password? Type your email and we'll send you a link to choose a new one."));
+        const email = field("email", "Email", "email");
+        btn.textContent = "Email me a reset link";
+        box.append(email, btn, msg, links(link("Back to sign in", () => { mode = "signin"; render(); })));
+        submit = async () => {
+          if (!email.value.trim()) throw new Error("Please type your email.");
+          try { await call("accounts:sendOobCode", { requestType: "PASSWORD_RESET", email: email.value.trim() }); }
+          catch (e) { if (e.code !== "EMAIL_NOT_FOUND") throw e; }       // don't reveal whether an email has a profile
+          msg.className = "gate-msg ok";
+          msg.textContent = "If that email has a profile, a reset link is on its way. Check your inbox (and spam).";
+        };
+        setTimeout(() => email.focus(), 0);
+      }
+      addPasswordToggles(box);
+      box.onsubmit = async e => {
+        e.preventDefault();
+        msg.className = "gate-msg"; msg.textContent = "";
+        const label = btn.textContent; btn.disabled = true; btn.textContent = "Please wait…";
+        try { await submit(); }
+        catch (err) { msg.className = "gate-msg"; msg.textContent = err.message || "Something went wrong. Please try again."; }
+        finally { btn.disabled = false; btn.textContent = label; }
+      };
+    }
+    render();
+  }
+  return { check, _call: call, _setKey: k => { apiKey = k; } };
+})();
+
+/* ---------------- Teacher lock (main site, Classroom Tools, Teacher Tools) ----------------
+   Uses the Teacher Portal password: it is right if it unlocks portal-key.json. */
+const TEACHER_UNLOCK_KEY = "classroom_teacher_unlocked";
+async function fetchTeacherLock() {
+  try { const r = await fetch("portal-key.json?t=" + Date.now(), { cache: "no-store" }); if (r.ok) return await r.json(); } catch {}
+  try {
+    const r = await fetch(`https://api.github.com/repos/${SITE.github.owner}/${SITE.github.repo}/contents/portal-key.json`,
+      { headers: { Accept: "application/vnd.github.raw+json" }, cache: "no-store" });
+    if (r.ok) return await r.json();
+  } catch {}
+  return null;
+}
+async function teacherPasswordOK(lock, pw) {
+  const fromB64 = x => Uint8Array.from(atob(x), ch => ch.charCodeAt(0));
+  const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveKey"]);
+  const key = await crypto.subtle.deriveKey({ name: "PBKDF2", salt: fromB64(lock.salt), iterations: lock.iterations, hash: "SHA-256" },
+    base, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+  await crypto.subtle.decrypt({ name: "AES-GCM", iv: fromB64(lock.iv) }, key, fromB64(lock.data));   // throws if wrong
+  return true;
+}
+async function checkTeacherLock() {
+  const reveal = () => document.documentElement.classList.remove("gate-wait");
+  const lock = await fetchTeacherLock();
+  if (!lock || !lock.salt) return reveal();            // no Teacher Portal password set up yet
+  let saved = null;
+  try { saved = localStorage.getItem(TEACHER_UNLOCK_KEY) || sessionStorage.getItem(TEACHER_UNLOCK_KEY); } catch {}
+  if (saved && saved === lock.salt) return reveal();
+  const footer = el("p", "gate-foot");
+  const a = el("a", null, "Parent? Go to the Parent Portal");
+  a.href = "parents.html";
+  footer.appendChild(a);
+  showGate({
+    title: "Teacher Area",
+    sub: "Enter your Teacher Portal password.",
+    check: async pw => (await teacherPasswordOK(lock, pw)) ? lock.salt : null,
+    storeKey: TEACHER_UNLOCK_KEY,
+    footer,
+    reveal
   });
 }
 
@@ -138,6 +358,7 @@ function normalizeContent(c) {
   c = c || {};
   c.settings = Object.assign({ newsNewDays: 7, teacherName: SITE.teacherName, welcome: SITE.welcome }, c.settings);
   c.settings.siteLock = Object.assign({ on: false, hash: "", salt: "", iterations: 150000 }, c.settings.siteLock);
+  c.settings.parentAccounts = Object.assign({ on: false, apiKey: "", projectId: "", requireCode: true }, c.settings.parentAccounts);
   if (!c.settings.teacherName) c.settings.teacherName = SITE.teacherName;
   if (!c.settings.welcome) c.settings.welcome = SITE.welcome;
   if (!Array.isArray(c.banners)) {
