@@ -1,14 +1,13 @@
 # Rabbi Eisgrau's Class Website
 
 ## How the site is organized
-- **Main site** (`index.html`, your web address): welcome page with a **Parent Portal** button and a
-  **Teacher Menu** with: **Parent Portal Controls** (the Teacher Portal, password protected),
-  **Teacher Tools** (Prize Boxes) and **Classroom Tools** (students, groups, random picks, raffle).
-- **Parent Portal** (`parents.html`, also reachable at **/parents**): Classwork, Homework, News,
-  Programs and Contact. It has no links to the teacher side. Give families this address.
-- **Parent Portal access** (Teacher Portal → Site Settings → "Who can open the Parent Portal?"): Open to everyone, Class password, or Parent profiles.
-- **Locks:** the main site, Classroom Tools and Teacher Tools ask for your **Teacher Portal password**.
-  The Parent Portal pages use the **website password** (switch it on/off in the portal).
+- **Sign-in page** (`index.html`, your web address): one password box over an empty classroom that slowly pans out.
+  - **Teacher Portal password** → **Teacher Area** (`teacher.html`) with the Teacher Menu: View Parent Portal,
+    Parent Portal Controls, Teacher Tools, Classroom Tools, and Sign out.
+  - **Class password** → **Parent Portal** (`parents.html`). With parent profiles on, parents type email + password
+    (links for "Forgot password?" and "Create a parent profile"). With "Open to everyone", a Parent Portal button shows.
+- Parents never see the teacher side; teacher pages ask for the Teacher Portal password if opened directly.
+- To use a real photo behind the sign-in page, upload one named **signin-photo.jpg**.
 
 ## Teacher Tools
 - **Prize Boxes:** add prizes with how many of each (type "Pencil × 10", paste a list like "3 x Stickers",

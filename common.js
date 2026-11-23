@@ -10,9 +10,10 @@ function applyNames(name, welcome) {
 const IS_PORTAL = /portal\.html$/.test(location.pathname);
 // Locks: the Parent Portal pages use the website password (set in the portal, can be off);
 // the teacher side (main site, Classroom Tools, Teacher Tools) uses the Teacher Portal password.
-const TEACHER_PAGE = /(^|\/)(index\.html|classroom\.html|teacher-tools\.html)?$/.test(location.pathname);
-const NO_LOCK = IS_PORTAL || TEACHER_PAGE;
-if (!IS_PORTAL) document.documentElement.classList.add("gate-wait");
+const SIGNIN_PAGE = /(^|\/)(index\.html)?$/.test(location.pathname);
+const TEACHER_PAGE = /(^|\/)(teacher\.html|classroom\.html|teacher-tools\.html)$/.test(location.pathname);
+const NO_LOCK = IS_PORTAL || TEACHER_PAGE || SIGNIN_PAGE;
+if (!IS_PORTAL && !SIGNIN_PAGE) document.documentElement.classList.add("gate-wait");
 
 document.addEventListener("DOMContentLoaded", () => {
   if (IS_PORTAL) return;
@@ -72,6 +73,7 @@ async function checkSiteLock(c) {
   if (pa && pa.on && pa.apiKey) return ParentAccounts.check(c, reveal);
   if (!lock || !lock.on || !lock.hash) return reveal();
   if (readUnlock() === lock.hash) return reveal();
+  try { if (localStorage.getItem("classroom_teacher_unlocked") || sessionStorage.getItem("classroom_teacher_unlocked")) return reveal(); } catch {}
   showSiteGate(c, lock, reveal);
 }
 function showSiteGate(c, lock, reveal) {
@@ -194,6 +196,7 @@ const ParentAccounts = (() => {
     apiKey = pa.apiKey;
     const sess = read();
     if (sess && sess.refreshToken && await stillValid(sess)) { badge(sess); return reveal(); }
+    try { if (localStorage.getItem("classroom_teacher_unlocked") || sessionStorage.getItem("classroom_teacher_unlocked")) return reveal(); } catch {}
     if (sess) clear();
     showLogin(c, reveal);
   }
@@ -209,7 +212,7 @@ const ParentAccounts = (() => {
     const field = (type, ph, ac) => { const i = el("input"); i.type = type; i.placeholder = ph; i.setAttribute("aria-label", ph); if (ac) i.autocomplete = ac; return i; };
     const link = (text, fn) => { const a = el("button", "gate-link", text); a.type = "button"; a.addEventListener("click", fn); return a; };
     const links = (...items) => { const d = el("div", "gate-links"); d.append(...items); return d; };
-    let mode = "signin";
+    let mode = location.hash === "#signup" ? "signup" : location.hash === "#forgot" ? "forgot" : "signin";
     function render() {
       box.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>';
       box.appendChild(el("h1", "gate-title", c.settings.teacherName));
@@ -278,7 +281,13 @@ const ParentAccounts = (() => {
     }
     render();
   }
-  return { check, _call: call, _setKey: k => { apiKey = k; } };
+  async function signIn(key, email, password, remember) {
+    apiKey = key;
+    const j = await call("accounts:signInWithPassword", { email, password, returnSecureToken: true });
+    save({ email: j.email, name: j.displayName || "", refreshToken: j.refreshToken, idToken: j.idToken }, remember);
+    return j;
+  }
+  return { check, signIn, _call: call, _setKey: k => { apiKey = k; } };
 })();
 
 /* ---------------- Teacher lock (main site, Classroom Tools, Teacher Tools) ----------------
@@ -309,8 +318,8 @@ async function checkTeacherLock() {
   try { saved = localStorage.getItem(TEACHER_UNLOCK_KEY) || sessionStorage.getItem(TEACHER_UNLOCK_KEY); } catch {}
   if (saved && saved === lock.salt) return reveal();
   const footer = el("p", "gate-foot");
-  const a = el("a", null, "Parent? Go to the Parent Portal");
-  a.href = "parents.html";
+  const a = el("a", null, "← Back to sign in");
+  a.href = "index.html";
   footer.appendChild(a);
   showGate({
     title: "Teacher Area",
