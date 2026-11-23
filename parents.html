@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Parent Portal – Rabbi Eisgrau</title>
-  <link rel="stylesheet" href="style.css?v=20261205">
-  <script src="data.js?v=20261205"></script>
-  <script src="common.js?v=20261205"></script>
+  <link rel="stylesheet" href="style.css?v=20261208">
+  <script src="data.js?v=20261208"></script>
+  <script src="common.js?v=20261208"></script>
 </head>
 <body class="landing-body" data-page="home">
   <div class="home">
@@ -89,6 +89,7 @@
         <div class="ornament"></div>
         <h1 data-welcome>Welcome to My Class</h1>
         <p class="teacher" data-teacher>Rabbi Eisgrau</p>
+        <p class="hp-message hidden" data-hp="message"></p>
       </div>
 
       <nav class="home-nav" aria-label="Class sections">
@@ -98,7 +99,7 @@
             <path d="M32 16v38"/>
             <path class="accent" d="M15 22c4 0 8 1 11 3M15 30c4 0 8 1 11 3M38 25c3-2 7-3 11-3M38 33c3-2 7-3 11-3"/>
           </svg></span>
-          <span>Classwork</span>
+          <span data-hp="classwork">Classwork</span>
         </a>
         <a class="side-btn" href="homework.html">
           <span class="badge"><svg viewBox="0 0 64 64" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -107,7 +108,7 @@
             <path class="accent" d="M20 30h20M20 38h14"/>
             <path class="accent" d="M46 34l8-8 4 4-8 8-6 2z"/>
           </svg></span>
-          <span>Homework</span>
+          <span data-hp="homework">Homework</span>
         </a>
         <a class="side-btn" href="news.html" id="news-btn">
           <span class="badge"><span class="count hidden" id="news-count"></span><svg viewBox="0 0 64 64" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -116,7 +117,7 @@
             <rect x="21" y="20" width="12" height="10"/>
             <path class="accent" d="M38 21h8M38 28h8M21 37h25M21 44h25"/>
           </svg></span>
-          <span>News</span>
+          <span data-hp="news">News</span>
         </a>
         <a class="side-btn" href="programs.html">
           <span class="badge"><svg viewBox="0 0 64 64" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -124,7 +125,7 @@
             <path d="M8 24h48M20 6v12M44 6v12"/>
             <path class="accent" d="M32 30l3.5 7 7.5 1-5.5 5 1.5 7.5L32 47l-6.5 3.5L27 43l-5.5-5 7.5-1z"/>
           </svg></span>
-          <span>Programs</span>
+          <span data-hp="programs">Programs</span>
         </a>
       </nav>
     </div>
@@ -132,7 +133,7 @@
     <div class="home-bottom">
       <a class="home-contact" href="contact.html">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 7l10 7 10-7"/></svg>
-        Contact Me
+        <span data-hp="contact">Contact Me</span>
       </a>
     </div>
   </div>

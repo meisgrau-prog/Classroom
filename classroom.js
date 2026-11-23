@@ -225,9 +225,9 @@
       raffle: ["Raffle", ICON.raffle, raffleView],
       prizes: ["Prize Boxes", ICON.prizes, prizesView]
     };
-    const keys = OPTS.tools || ["students", "groups", "number", "picker", "raffle"];
+    const keys = OPTS.tools || ["students", "groups", "number", "picker", "raffle", "prizes"];
     const menu = h("nav", { class: "cr-menu", "aria-label": "Tools" });
-    menu.style.gridTemplateColumns = `repeat(${Math.min(5, Math.max(keys.length, 2))}, minmax(0, 1fr))`;
+    menu.style.gridTemplateColumns = `repeat(${keys.length === 6 ? 3 : Math.min(5, Math.max(keys.length, 2))}, minmax(0, 1fr))`;
     keys.forEach(key => {
       const [label, icon] = all[key];
       menu.appendChild(h("button", { type: "button", class: "cr-tool", "data-tool": key, onclick: () => show(key) },

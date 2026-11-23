@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Sign In – Rabbi Eisgrau</title>
-  <link rel="stylesheet" href="style.css?v=20261205">
-  <script src="data.js?v=20261205"></script>
-  <script src="common.js?v=20261205"></script>
+  <link rel="stylesheet" href="style.css?v=20261208">
+  <script src="data.js?v=20261208"></script>
+  <script src="common.js?v=20261208"></script>
 </head>
 <body class="landing-body" data-page="signin">
   <div class="home signin">
@@ -65,24 +65,37 @@
       </svg>
       <div class="home-tint"></div>
     </div>
-    <main class="signin-main">
-      <form class="gate-box signin-box" id="signin-form" autocomplete="on">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-        <p class="signin-eyebrow" data-welcome>Welcome to My Class</p>
-        <h1 class="gate-title" data-teacher>Rabbi Eisgrau</h1>
-        <p class="gate-sub" id="signin-sub">Sign in with your password.</p>
-        <input type="email" id="si-email" class="hidden" placeholder="Email (parents with a profile)" autocomplete="username" aria-label="Email">
-        <input type="password" id="si-pass" placeholder="Password" autocomplete="current-password" aria-label="Password" required>
-        <label class="gate-remember"><input type="checkbox" id="si-remember"> Keep me signed in on this device</label>
-        <button class="gate-btn" type="submit" id="si-btn">Sign in</button>
-        <p class="gate-msg" id="si-msg"></p>
-        <div class="gate-links hidden" id="si-parent-links">
-          <a class="gate-link" href="parents.html#forgot">Forgot password?</a>
-          <a class="gate-link" href="parents.html#signup">Create a parent profile</a>
+    <header class="hp-top">
+      <span class="brand" data-teacher>Rabbi Eisgrau</span>
+      <nav class="hp-nav"><a href="#signin-form">Sign in</a></nav>
+    </header>
+    <main class="hp-main">
+      <section class="hp-hero">
+        <div class="ornament"></div>
+        <h1 data-welcome>Welcome to My Class</h1>
+        <p class="teacher" data-teacher>Rabbi Eisgrau</p>
+        <p class="hp-blurb">Classwork, homework, news and programs for our class families — all in one place. Please sign in to continue.</p>
+      </section>
+      <form class="hp-card" id="signin-form" autocomplete="on">
+        <h2>Sign in</h2>
+        <div class="hp-tabs" role="tablist" aria-label="I am a">
+          <button type="button" role="tab" class="hp-tab" data-role="parent" aria-selected="true">Parent</button>
+          <button type="button" role="tab" class="hp-tab" data-role="teacher" aria-selected="false">Teacher</button>
         </div>
-        <a class="signin-open hidden" id="si-open" href="parents.html">Parent Portal →</a>
+        <p class="hp-sub" id="signin-sub">Enter the class password.</p>
+        <input type="email" id="si-email" class="hidden" placeholder="Email" autocomplete="username" aria-label="Email">
+        <input type="password" id="si-pass" placeholder="Password" autocomplete="current-password" aria-label="Password" required>
+        <label class="hp-remember"><input type="checkbox" id="si-remember"> Keep me signed in on this device</label>
+        <button class="hp-btn" type="submit" id="si-btn">Sign in</button>
+        <p class="hp-msg" id="si-msg"></p>
+        <div class="hp-links hidden" id="si-parent-links">
+          <a href="parents.html#forgot">Forgot password?</a>
+          <a href="parents.html#signup">Create a parent profile</a>
+        </div>
+        <a class="hp-open hidden" id="si-open" href="parents.html">Go to the Parent Portal →</a>
       </form>
     </main>
+    <footer class="hp-foot">© <span data-teacher>Rabbi Eisgrau</span></footer>
   </div>
   <script>
     (async function () {
@@ -95,24 +108,33 @@
       const pa = c && c.settings.parentAccounts, lock = c && c.settings.siteLock;
       const profiles = !!(pa && pa.on && pa.apiKey);
       const open = c && !profiles && !(lock && lock.on && lock.hash);
-      if (profiles) {
-        $("si-email").classList.remove("hidden");
-        $("si-parent-links").classList.remove("hidden");
-        $("signin-sub").textContent = "Parents: sign in with your email and password. Teacher: password only.";
+      let role = "parent";
+      function setRole(r) {
+        role = r;
+        document.querySelectorAll(".hp-tab").forEach(t => t.setAttribute("aria-selected", t.dataset.role === r ? "true" : "false"));
+        const parent = r === "parent";
+        $("si-email").classList.toggle("hidden", !(parent && profiles));
+        $("si-parent-links").classList.toggle("hidden", !(parent && profiles));
+        $("si-open").classList.toggle("hidden", !(parent && open));
+        $("si-pass").classList.toggle("hidden", parent && open);
+        $("si-btn").classList.toggle("hidden", parent && open);
+        document.querySelector(".hp-remember").classList.toggle("hidden", parent && open);
+        $("signin-sub").textContent = !parent ? "Enter your teacher password."
+          : open ? "The Parent Portal is open — no password needed."
+          : profiles ? "Sign in with your email and password." : "Enter the class password.";
+        $("si-msg").textContent = "";
+        (parent && profiles ? $("si-email") : $("si-pass")).focus();
       }
-      if (open) {
-        $("si-open").classList.remove("hidden");
-        $("signin-sub").textContent = "Parents can go straight to the Parent Portal.";
-      }
+      document.querySelectorAll(".hp-tab").forEach(t => t.addEventListener("click", () => setRole(t.dataset.role)));
       form.addEventListener("submit", async e => {
         e.preventDefault();
-        msg.className = "gate-msg"; msg.textContent = "";
+        msg.textContent = "";
         const pw = $("si-pass").value, email = $("si-email").value.trim(), remember = $("si-remember").checked;
         if (!pw) return;
         if (!(window.crypto && crypto.subtle)) { msg.textContent = "Please open this site with https:// at the start of the address."; return; }
         btn.disabled = true; btn.textContent = "Signing in…";
         try {
-          if (email && profiles) {                                   // parent with a profile
+          if (role === "parent" && email && profiles) {                                   // parent with a profile
             await ParentAccounts.signIn(pa.apiKey, email, pw, remember);
             location.href = "parents.html"; return;
           }
@@ -124,7 +146,7 @@
             const h = await hashSitePassword(pw, lock.salt, lock.iterations);
             if (h === lock.hash) { store("classroom_site_unlocked", h, remember); location.href = "parents.html"; return; }
           }
-          msg.textContent = profiles && !email ? "That password isn't right. Parents: please type your email too." : "That password isn't right. Please try again.";
+          msg.textContent = role === "parent" && profiles && !email ? "Please type your email too." : "That password isn't right. Please try again.";
           $("si-pass").select();
         } catch (err) {
           msg.textContent = err.message || "That password isn't right. Please try again.";
@@ -135,7 +157,7 @@
       img.onload = () => { const el = $("signin-photo"); el.style.backgroundImage = "url(signin-photo.jpg)"; el.classList.add("show"); };
       img.src = "signin-photo.jpg";
       addPasswordToggles(document);
-      $("si-pass").focus();
+      setRole("parent");
     })();
   </script>
 </body>

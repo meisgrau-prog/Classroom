@@ -1,5 +1,14 @@
 // Shared helpers used by every page.
 
+// Parent Portal home page wording (set in the Teacher Portal)
+function applyHomeText(t) {
+  document.querySelectorAll("[data-hp]").forEach(el => {
+    const v = (t[el.dataset.hp] || "").trim();
+    if (el.dataset.hp === "message") { el.textContent = v; el.classList.toggle("hidden", !v); }
+    else if (v) el.textContent = v;
+  });
+}
+
 // Teacher name & welcome text: set in the Teacher Portal (falls back to data.js).
 function applyNames(name, welcome) {
   document.querySelectorAll("[data-teacher]").forEach(el => { el.textContent = name; });
@@ -21,6 +30,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (TEACHER_PAGE) checkTeacherLock();
   loadContent().then(async c => {
     applyNames(c.settings.teacherName, c.settings.welcome);
+    applyHomeText(c.settings.homeText);
     showBanners(c);
     if (!NO_LOCK) await checkSiteLock(c);
   }).catch(() => { if (!TEACHER_PAGE) document.documentElement.classList.remove("gate-wait"); });
@@ -366,6 +376,7 @@ const BANNER_COLORS = {
 function normalizeContent(c) {
   c = c || {};
   c.settings = Object.assign({ newsNewDays: 7, teacherName: SITE.teacherName, welcome: SITE.welcome }, c.settings);
+  c.settings.homeText = Object.assign({ message: "", classwork: "Classwork", homework: "Homework", news: "News", programs: "Programs", contact: "Contact Me" }, c.settings.homeText);
   c.settings.siteLock = Object.assign({ on: false, hash: "", salt: "", iterations: 150000 }, c.settings.siteLock);
   c.settings.parentAccounts = Object.assign({ on: false, apiKey: "", projectId: "", requireCode: true }, c.settings.parentAccounts);
   if (!c.settings.teacherName) c.settings.teacherName = SITE.teacherName;

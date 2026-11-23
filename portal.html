@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
   <title>Teacher Portal – Rabbi Eisgrau</title>
-  <link rel="stylesheet" href="style.css?v=20261205">
-  <script src="data.js?v=20261205"></script>
-  <script src="common.js?v=20261205"></script>
+  <link rel="stylesheet" href="style.css?v=20261208">
+  <script src="data.js?v=20261208"></script>
+  <script src="common.js?v=20261208"></script>
 </head>
 <body class="portal">
   <header class="topbar">
@@ -138,11 +138,27 @@
             <input type="text" id="set-name" placeholder="e.g. Rabbi Eisgrau">
           </div>
           <div class="field">
-            <label for="set-welcome">Welcome message (home page)</label>
+            <label for="set-welcome">Welcome heading (home page)</label>
             <input type="text" id="set-welcome" placeholder="e.g. Welcome to My Class">
           </div>
         </div>
         <p class="help" style="margin:0">The teacher name appears on the home page and at the top of every page.</p>
+
+        <details class="hp-words" open>
+          <summary>Parent Portal home page wording</summary>
+          <p class="help">Change the words families see on the Parent Portal home page. Leave a box empty to keep the original.</p>
+          <div class="field">
+            <label for="hp-message">Short message under your name (optional)</label>
+            <textarea id="hp-message" rows="2" placeholder="e.g. Shalom! Here you'll find everything happening in our class."></textarea>
+          </div>
+          <div class="hp-words-grid">
+            <div class="field"><label for="hp-classwork">Classwork button</label><input type="text" id="hp-classwork" placeholder="Classwork"></div>
+            <div class="field"><label for="hp-homework">Homework button</label><input type="text" id="hp-homework" placeholder="Homework"></div>
+            <div class="field"><label for="hp-news">News button</label><input type="text" id="hp-news" placeholder="News"></div>
+            <div class="field"><label for="hp-programs">Programs button</label><input type="text" id="hp-programs" placeholder="Programs"></div>
+            <div class="field"><label for="hp-contact">Contact button</label><input type="text" id="hp-contact" placeholder="Contact Me"></div>
+          </div>
+        </details>
 
         <div class="lock-box access-box">
           <h3 class="section-title" style="font-size:1.3rem">Who can open the Parent Portal?</h3>
@@ -258,7 +274,7 @@
     <button class="button" id="save-btn" type="button">Save &amp; Publish</button>
   </div>
 
-  <script src="portal.js?v=20261205"></script>
-  <script src="classroom.js?v=20261205"></script>
+  <script src="portal.js?v=20261208"></script>
+  <script src="classroom.js?v=20261208"></script>
 </body>
 </html>

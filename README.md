@@ -9,11 +9,29 @@
 - Parents never see the teacher side; teacher pages ask for the Teacher Portal password if opened directly.
 - To use a real photo behind the sign-in page, upload one named **signin-photo.jpg**.
 
-## Teacher Tools
-- **Prize Boxes:** add prizes with how many of each (type "Pencil × 10", paste a list like "3 x Stickers",
-  or upload an Excel sheet). Four numbered gift boxes each hide a random prize; click one to open it.
-  That prize is taken off the list. "New round" refills the boxes; "Show the other boxes" peeks.
-  Prizes given out can be printed. Saved only in that browser on that device.
+## Teacher Area
+After signing in with the Teacher Portal password you land on the **Teacher Area** home: a side menu
+(Home, Parent Portal Controls, Classroom Tools, Teacher Tools, View Parent Portal, Sign out) and a
+dashboard showing families due for a call, follow-ups due and calls this week.
+
+## Teacher Tools → Phone Log
+- **Log a Call:** student grid with "Called 3 days ago" and a colored bar (green ≤2 weeks, gold 2–6 weeks,
+  grey >6 weeks/never); "Due for a call" and "Follow-ups" boxes; tap a student to log a call
+  (result, color-coded categories with subcategories, spoke with, note, follow-up, date/time, Save + Undo).
+- **Follow-ups:** Due now / Coming up / No date set, filter by type, "Log follow-up" and "Done", print.
+- **History:** by day with colored stripes and tags; filter by student, type, follow-ups only;
+  Delete, Mark followed up, **Download spreadsheet**, **Print report** (filter by a student for a student report).
+- **Students:** class list (shared with Classroom Tools) and **Download/Restore backup**.
+- **Settings:** categories (name, color, subcategories — put subjects under Academics; add, remove, reorder),
+  result buttons, "spoke with" choices, follow-up choices, and the green/due timing.
+- The phone log is private: it's saved only in that browser on that device, never on GitHub.
+
+## Classroom Tools
+Students, Group Maker, Random Number, Random Student, Raffle, Prize Boxes.
+
+## Parent Portal home page wording
+Teacher Portal → Site Settings: welcome heading, a short message under your name, and the names of the
+Classwork, Homework, News, Programs and Contact buttons.
 
 ## Parent profiles (optional)
 Parents can each have their own profile (email + password) instead of one class password, with

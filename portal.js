@@ -845,6 +845,12 @@ function settingsControls() {
   welcome.value = content.settings.welcome || "";
   name.oninput = () => { content.settings.teacherName = name.value; changed(); };
   welcome.oninput = () => { content.settings.welcome = welcome.value; changed(); };
+  const ht = content.settings.homeText;
+  ["message", "classwork", "homework", "news", "programs", "contact"].forEach(k => {
+    const el = $("hp-" + k);
+    el.value = k === "message" ? (ht[k] || "") : (ht[k] && ht[k] !== el.placeholder ? ht[k] : "");
+    el.oninput = () => { ht[k] = el.value.trim() || (k === "message" ? "" : el.placeholder); changed(); };
+  });
 }
 
 function renderAll() {
