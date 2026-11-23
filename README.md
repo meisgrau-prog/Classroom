@@ -26,6 +26,18 @@ dashboard showing families due for a call, follow-ups due and calls this week.
   result buttons, "spoke with" choices, follow-up choices, and the green/due timing.
 - The phone log is private: it's saved only in that browser on that device, never on GitHub.
 
+## Teacher Tools → Gradebook
+- **Dashboard:** any dates (this week, last week, this month, all, or custom); class averages per category,
+  a "Needs attention" list, color-coded student table; click a student for details; Download Excel; Print.
+- **Enter Grades:** spreadsheet grid per category (and subject) for a week. Type, arrow keys, Enter/Tab;
+  drag the gold corner square to copy down/across (double-click it to fill down); Ctrl+C / Ctrl+V with Excel;
+  Delete clears; "Fill blanks with…" for a column or the whole week. Row averages and class averages update live.
+- **Excel Export:** a week or any dates → Summary + one sheet per category (subjects in blocks with a Total block),
+  real formulas (AVERAGE/SUM) that calculate themselves and can be dragged, color highlighting, frozen headers.
+- **Settings:** students, categories (name, color, daily/weekly, score vs. count vs. notes, top score, subjects,
+  on dashboard), school days, week start, color/warning levels, decimals; **Import .xlsx** (your workbook);
+  backup/restore. Saved only on this device.
+
 ## Classroom Tools
 Students, Group Maker, Random Number, Random Student, Raffle, Prize Boxes.
 
