@@ -2079,3 +2079,21 @@ html:has(body.tshell) { height: auto; }
 .plist-status { white-space: nowrap; }
 #panel-parents .pj-foot input { margin: 0; padding: 11px 14px; font: 400 1rem var(--sans); border: 1px solid var(--border); border-radius: 10px; background: #fffdf8; color: var(--navy); width: 100%; }
 #panel-parents .pj-foot input:focus { outline: 2px solid var(--gold); border-color: var(--gold); }
+
+/* user button: top-right (in the top bar, or the corner of the home page) */
+.parent-pill.in-bar { position: relative; right: auto; bottom: auto; z-index: 960; }
+.parent-pill.corner { position: fixed; top: 16px; right: 16px; bottom: auto; z-index: 960; }
+.parent-pill.in-bar .parent-pill-btn, .parent-pill.corner .parent-pill-btn { padding: 8px 16px 8px 8px; font: 600 .95rem var(--sans); max-width: 60vw; }
+.parent-pill.in-bar .parent-pill-btn { background: rgba(255,255,255,.06); box-shadow: none; }
+.parent-pill-btn svg:first-child { width: 28px; height: 28px; padding: 5px; border-radius: 50%; background: var(--gold); color: var(--navy); }
+.parent-pill-btn::after { content: ""; width: 7px; height: 7px; border-right: 2px solid var(--gold-soft); border-bottom: 2px solid var(--gold-soft); transform: rotate(45deg) translate(-2px, -2px); margin-left: 4px; flex: none; transition: transform .2s; }
+.parent-pill-btn[aria-expanded=true]::after { transform: rotate(-135deg) translate(-2px, -2px); }
+.parent-pill.in-bar .parent-pill-menu, .parent-pill.corner .parent-pill-menu { top: calc(100% + 8px); bottom: auto; right: 0; }
+.parent-pill-who { display: flex; flex-direction: column; gap: 1px; padding: 4px 8px 10px; margin-bottom: 4px; border-bottom: 1px solid #eee6d6; }
+.parent-pill-who strong { color: var(--navy); font-size: 1rem; }
+.parent-pill-who span { color: var(--gold); font-weight: 600; font-size: .85rem; }
+.parent-pill-who small { color: var(--muted); font-size: .82rem; overflow-wrap: anywhere; }
+@media (max-width: 520px) {
+  .parent-pill.in-bar .parent-pill-btn span, .parent-pill.corner .parent-pill-btn span { max-width: 34vw; }
+  .parent-pill.corner { top: 10px; right: 10px; }
+}

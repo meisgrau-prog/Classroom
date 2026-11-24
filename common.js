@@ -217,6 +217,18 @@ function userMenuItem(text, icon, fn, cls) {
   b.addEventListener("click", fn);
   return b;
 }
+// The user button sits top-right: in the top bar instead of the teacher's name, or in the corner of the home page.
+function placeUserPill(pill) {
+  const bar = document.querySelector(".topbar");
+  if (bar) {
+    const brand = bar.querySelector(".brand"); if (brand) brand.classList.add("hidden");
+    pill.classList.add("in-bar");
+    bar.appendChild(pill);
+  } else {
+    pill.classList.add("corner");
+    document.body.appendChild(pill);
+  }
+}
 function wireUserMenu(pill, btn, menu) {
   btn.setAttribute("aria-haspopup", "true"); btn.setAttribute("aria-expanded", "false");
   const set = open => { menu.classList.toggle("hidden", !open); btn.setAttribute("aria-expanded", open ? "true" : "false"); };
@@ -235,7 +247,7 @@ function classSignOutButton() {
   menu.appendChild(userMenuItem("Sign out", SIGNOUT_ICON, () => { try { localStorage.removeItem(UNLOCK_KEY); sessionStorage.removeItem(UNLOCK_KEY); } catch {} location.href = "index.html"; }, "danger"));
   wireUserMenu(pill, b, menu);
   pill.append(b, menu);
-  document.body.appendChild(pill);
+  placeUserPill(pill);
 }
 
 /* ---------------- Parent accounts (Firebase Authentication, email + password) ----------------
@@ -300,9 +312,14 @@ const ParentAccounts = (() => {
     const b = el("button", "parent-pill-btn");
     b.type = "button";
     b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>';
-    b.appendChild(el("span", null, sess.name || sess.email));
+    const m = (sess.name || "").match(/^(.*?)\s*(?:\(parent of (.*)\))?$/) || [];
+    b.appendChild(el("span", null, (m[1] || "").trim() || sess.email));
     const menu = el("div", "parent-pill-menu hidden");
-    menu.appendChild(el("p", "parent-pill-email", sess.email));
+    const who = el("div", "parent-pill-who");
+    if (m[1]) who.appendChild(el("strong", null, m[1].trim()));
+    if (m[2]) who.appendChild(el("span", null, "Parent of " + m[2].trim()));
+    who.appendChild(el("small", null, sess.email));
+    menu.appendChild(who);
     const signOut = async () => { await ParentRegistry.signedOut(currentPA, read() || sess); clear(); location.href = "index.html"; };
     const out = userMenuItem("Sign out", SIGNOUT_ICON, signOut, "danger");
     const pw = userMenuItem("Change password", KEY_ICON, async () => {
@@ -312,7 +329,7 @@ const ParentAccounts = (() => {
     menu.append(pw, out);
     wireUserMenu(pill, b, menu);
     pill.append(b, menu);
-    document.body.appendChild(pill);
+    placeUserPill(pill);
   }
 
   async function check(c, reveal) {
