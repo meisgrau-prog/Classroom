@@ -2037,3 +2037,42 @@ html:has(body.tshell) { height: auto; }
 .pp-btns button[disabled] { opacity: .3; cursor: default; }
 .pp-tile::after { content: ""; position: absolute; left: 8px; right: 8px; top: 0; height: 3px; border-radius: 0 0 3px 3px; background: var(--fc); }
 @media (max-width: 600px) { .pp-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 10px; gap: 10px; } }
+
+/* ================= Parent Portal: visible sign out ================= */
+.parent-pill { display: flex; align-items: center; gap: 6px; }
+.parent-pill-out { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 999px; border: 1px solid rgba(201,169,106,.7); background: #14213d; color: #f3e6c4; font: 600 .9rem var(--sans); cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,.18); transition: background .2s; }
+.parent-pill-out:hover { background: #1f3158; }
+.parent-pill-out svg { width: 16px; height: 16px; }
+
+/* ================= Parents list (Parent Portal Settings) ================= */
+.plist-who { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 10px 14px; margin-bottom: 14px; background: #eef6f1; border: 1px solid #b7e2c6; border-radius: 12px; font-size: .92rem; }
+.plist-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
+.plist-table { width: 100%; border-collapse: collapse; font-size: .93rem; }
+.plist-table th { text-align: left; padding: 8px 10px; color: var(--muted); font-size: .78rem; text-transform: uppercase; letter-spacing: 1px; border-bottom: 2px solid #eee6d6; }
+.plist-table td { padding: 10px; border-bottom: 1px solid #f0ebe0; vertical-align: top; }
+.plist-table td strong { color: var(--navy); display: block; }
+.plist-table td small { display: block; color: var(--muted); font-size: .8rem; margin-top: 2px; }
+.plist-table tr.is-blocked td { background: #fdf3f3; }
+.plist-note { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plist-status { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: .78rem; font-weight: 700; }
+.plist-status.online { background: #dcfce7; color: #166534; }
+.plist-status.online::before { content: "●  "; color: #16a34a; }
+.plist-status.in { background: #e0ecff; color: #1e40af; }
+.plist-status.out { background: #f1ece1; color: #6b6253; }
+.plist-status.blocked { background: #fde2e2; color: #b42318; }
+.plist-acts { white-space: nowrap; text-align: right; }
+.plist-acts .small-btn { padding: 4px 10px; margin-left: 4px; }
+.plist-blocked { list-style: none; margin: 10px 0 0; padding: 0; }
+.plist-blocked li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid #f0ebe0; }
+.plist-blocked small { color: var(--muted); }
+.plist-setup summary { cursor: pointer; font-weight: 600; color: var(--navy); }
+.plist-rules-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 10px; font-size: .9rem; }
+.plist-rules { background: #14213d; color: #f3e6c4; padding: 14px 16px; border-radius: 10px; font-size: .8rem; line-height: 1.5; overflow-x: auto; white-space: pre; }
+/* teacher viewing the Parent Portal: way back */
+.teacher-back { position: fixed; left: 12px; bottom: 12px; z-index: 960; display: inline-flex; align-items: center; gap: 6px; padding: 10px 16px 10px 12px; border-radius: 999px; background: linear-gradient(180deg, #e2c58f, #c9a96a); color: #14213d; font: 700 .92rem var(--sans); text-decoration: none; box-shadow: 0 6px 18px rgba(0,0,0,.25); transition: transform .2s, box-shadow .2s; }
+.teacher-back:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(0,0,0,.3); }
+.teacher-back svg { width: 18px; height: 18px; }
+@media print { .teacher-back, .parent-pill { display: none !important; } }
+.plist-status { white-space: nowrap; }
+#panel-parents .pj-foot input { margin: 0; padding: 11px 14px; font: 400 1rem var(--sans); border: 1px solid var(--border); border-radius: 10px; background: #fffdf8; color: var(--navy); width: 100%; }
+#panel-parents .pj-foot input:focus { outline: 2px solid var(--gold); border-color: var(--gold); }

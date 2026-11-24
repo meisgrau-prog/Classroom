@@ -172,6 +172,7 @@ function portalView() {
   $("posts-area").classList.toggle("hidden", view !== "posts");
   if (view === "settings" && window.TeacherHome && !$("home-settings").children.length) TeacherHome.settingsCard($("home-settings"));
   if (location.hash === "#portal-settings" || location.hash === "#access") { const t = document.querySelector('.tab[data-tab="access"]'); if (t) t.click(); }
+  if (location.hash === "#parents") { const t = document.querySelector('.tab[data-tab="parents"]'); if (t) t.click(); }
   $("pp-title").textContent = TITLES[view];
   $("changepw-open").classList.toggle("hidden", view !== "settings");
   document.querySelectorAll(".ts-item[data-nav]").forEach(a => {
@@ -811,7 +812,7 @@ function parentAccountControls() {
       msg.className = "status ok"; msg.textContent = "✓ Connected to Firebase.";
     } catch (e) {
       if (["EMAIL_NOT_FOUND", "INVALID_LOGIN_CREDENTIALS", "INVALID_PASSWORD", "INVALID_EMAIL"].includes(e.code)) { msg.className = "status ok"; msg.textContent = "✓ Connected to Firebase. Email/password sign-in is ready."; }
-      else if (e.code === "OPERATION_NOT_ALLOWED") { msg.className = "status err"; msg.textContent = "Connected, but Email/Password sign-in is switched off. Turn it on in Firebase → Authentication → Sign-in method."; }
+      else if (e.code === "OPERATION_NOT_ALLOWED") { msg.className = "status err"; msg.textContent = "Connected, but Email/Password sign-in is switched off. Turn it on in Firebase → Security → Authentication → Sign-in method."; }
       else if (/API_KEY|API key/i.test((e.raw || "") + e.code)) { msg.className = "status err"; msg.textContent = "That API key wasn't accepted. Copy the apiKey value again from Firebase Project settings."; }
       else { msg.className = "status err"; msg.textContent = "Couldn't reach Firebase: " + e.message; }
     }
@@ -886,6 +887,7 @@ document.querySelectorAll(".tab").forEach(tab => {
   tab.addEventListener("click", () => {
     document.querySelectorAll(".tab").forEach(t => t.setAttribute("aria-selected", t === tab ? "true" : "false"));
     document.querySelectorAll(".panel").forEach(p => p.classList.toggle("hidden", p.id !== "panel-" + tab.dataset.tab));
+    if (tab.dataset.tab === "parents" && window.ParentList) ParentList.open($("panel-parents"));
   });
 });
 

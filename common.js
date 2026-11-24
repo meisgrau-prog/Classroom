@@ -31,8 +31,19 @@ const TEACHER_PAGE = /(^|\/)(teacher\.html|classroom\.html|teacher-tools\.html)$
 const NO_LOCK = IS_PORTAL || TEACHER_PAGE || SIGNIN_PAGE;
 if (!IS_PORTAL && !SIGNIN_PAGE) document.documentElement.classList.add("gate-wait");
 
+// When the teacher is looking at the Parent Portal, offer a quick way back.
+function teacherBackButton() {
+  let t = null; try { t = localStorage.getItem("classroom_teacher_unlocked") || sessionStorage.getItem("classroom_teacher_unlocked"); } catch {}
+  if (!t || document.querySelector(".teacher-back")) return;
+  const a = el("a", "teacher-back");
+  a.href = "teacher.html";
+  a.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg><span>Back to Teacher Area</span>';
+  a.title = "You're viewing the Parent Portal as the teacher";
+  document.body.appendChild(a);
+}
 document.addEventListener("DOMContentLoaded", () => {
   if (IS_PORTAL) return;
+  if (!TEACHER_PAGE && !SIGNIN_PAGE) teacherBackButton();
   applyNames(SITE.teacherName, SITE.welcome);
   applyGrade(SITE.grade);
   if (TEACHER_PAGE) checkTeacherLock();
@@ -91,7 +102,7 @@ async function checkSiteLock(c) {
   const pa = c.settings.parentAccounts;
   if (pa && pa.on && pa.apiKey) return ParentAccounts.check(c, reveal);
   if (!lock || !lock.on || !lock.hash) return reveal();
-  if (readUnlock() === lock.hash) return reveal();
+  if (readUnlock() === lock.hash) { classSignOutButton(); return reveal(); }
   try { if (localStorage.getItem("classroom_teacher_unlocked") || sessionStorage.getItem("classroom_teacher_unlocked")) return reveal(); } catch {}
   showSiteGate(c, lock, reveal);
 }
@@ -101,7 +112,7 @@ function showSiteGate(c, lock, reveal) {
     sub: "This class website is private. Please enter the password.",
     check: async pw => { const h = await hashSitePassword(pw, lock.salt, lock.iterations); return h === lock.hash ? h : null; },
     storeKey: UNLOCK_KEY,
-    reveal
+    reveal: () => { classSignOutButton(); reveal(); }
   });
 }
 
@@ -143,6 +154,71 @@ function showGate(opt) {
   });
 }
 
+/* ---------------- Parent list (Firestore) ----------------
+   When the teacher has set up the parent list, each parent's profile (name, child, email,
+   last visit) is saved here, and blocked parents are refused. Only the teacher can read the list. */
+const ParentRegistry = (() => {
+  const base = pid => `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(pid)}/databases/(default)/documents`;
+  async function fs(pid, token, method, path, body) {
+    const r = await fetch(base(pid) + "/" + path, { method, headers: Object.assign({ Authorization: "Bearer " + token }, body ? { "Content-Type": "application/json" } : {}), body: body ? JSON.stringify(body) : undefined });
+    const j = await r.json().catch(() => ({}));
+    return { ok: r.ok, status: r.status, json: j, error: (j.error && (j.error.status || j.error.message)) || "", message: (j.error && j.error.message) || "" };
+  }
+  async function sha(text) {
+    const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(String(text).trim().toLowerCase()));
+    return Array.from(new Uint8Array(d), b => b.toString(16).padStart(2, "0")).join("");
+  }
+  const val = v => typeof v === "boolean" ? { booleanValue: v } : v instanceof Date ? { timestampValue: v.toISOString() } : { stringValue: String(v == null ? "" : v) };
+  const toFields = o => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, val(v)]));
+  function fromDoc(d) {
+    const o = { id: d.name.split("/").pop() };
+    Object.entries(d.fields || {}).forEach(([k, v]) => { o[k] = "stringValue" in v ? v.stringValue : "booleanValue" in v ? v.booleanValue : "timestampValue" in v ? v.timestampValue : "integerValue" in v ? +v.integerValue : null; });
+    return o;
+  }
+  async function patch(pid, token, path, obj) {
+    const mask = Object.keys(obj).map(k => "updateMask.fieldPaths=" + encodeURIComponent(k)).join("&");
+    return fs(pid, token, "PATCH", path + "?" + mask, { fields: toFields(obj) });
+  }
+  // Is this parent blocked? (by account or by email)
+  async function isBlocked(pid, sess) {
+    for (const id of [sess.uid, await sha(sess.email)]) {
+      if (!id) continue;
+      const r = await fs(pid, sess.idToken, "GET", "blocked/" + id);
+      if (r.ok) return true;
+    }
+    return false;
+  }
+  // Save the visit. Returns "blocked", "ok" or "off" (no parent list set up).
+  async function touch(pa, sess, extra, force) {
+    if (!pa || !pa.projectId || !sess || !sess.idToken || !sess.uid || !(window.crypto && crypto.subtle)) return "off";
+    const KEY = "classroom_parent_touch";
+    try { if (!force && Date.now() - (+sessionStorage.getItem(KEY) || 0) < 5 * 60 * 1000) return "ok"; } catch {}
+    try {
+      if (await isBlocked(pa.projectId, sess)) return "blocked";
+      const r = await patch(pa.projectId, sess.idToken, "parents/" + sess.uid, Object.assign({ email: sess.email, lastSeen: new Date(), signedIn: true }, sess.name ? { accountName: sess.name } : {}, extra || {}));
+      if (r.ok) { try { sessionStorage.setItem(KEY, String(Date.now())); } catch {} }
+      return r.ok ? "ok" : "off";
+    } catch { return "off"; }
+  }
+  async function signedOut(pa, sess) {
+    if (!pa || !pa.projectId || !sess || !sess.uid || !sess.idToken) return;
+    try { await patch(pa.projectId, sess.idToken, "parents/" + sess.uid, { signedIn: false, lastSeen: new Date() }); } catch {}
+    try { sessionStorage.removeItem("classroom_parent_touch"); } catch {}
+  }
+  return { fs, sha, patch, fromDoc, toFields, touch, signedOut, isBlocked };
+})();
+
+/* A clear "Sign out" for families who opened the Parent Portal with the class password. */
+function classSignOutButton() {
+  if (document.querySelector(".parent-pill")) return;
+  const pill = el("div", "parent-pill");
+  const out = el("button", "parent-pill-out", "Sign out"); out.type = "button";
+  out.insertAdjacentHTML("afterbegin", '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg>');
+  out.addEventListener("click", () => { try { localStorage.removeItem(UNLOCK_KEY); sessionStorage.removeItem(UNLOCK_KEY); } catch {} location.href = "index.html"; });
+  pill.appendChild(out);
+  document.body.appendChild(pill);
+}
+
 /* ---------------- Parent accounts (Firebase Authentication, email + password) ----------------
    Each parent makes a profile with their own password; "Forgot password?" emails a reset link.
    Uses Firebase's public sign-in web service directly; only the web API key is needed. */
@@ -160,7 +236,15 @@ const ParentAccounts = (() => {
     MISSING_PASSWORD: "Please type a password.",
     OPERATION_NOT_ALLOWED: "Parent sign-in isn't switched on yet. Please contact the teacher."
   };
-  let apiKey = "";
+  let apiKey = "", currentPA = null;
+  const BLOCKED_MSG = "Your access to the Parent Portal has been turned off. Please contact the teacher.";
+  function blockedScreen(c) {
+    const gate = el("div", "site-gate"); const box = el("div", "gate-box");
+    box.append(el("h1", "gate-title", c.settings.teacherName), el("p", "gate-sub", BLOCKED_MSG));
+    const a = el("a", "gate-btn", "Back to the home page"); a.href = "index.html"; a.style.textDecoration = "none"; a.style.display = "block"; a.style.textAlign = "center";
+    box.appendChild(a); gate.appendChild(box); document.body.appendChild(gate);
+    document.documentElement.classList.remove("gate-wait");
+  }
   async function call(path, body) {
     const r = await fetch(`https://identitytoolkit.googleapis.com/v1/${path}?key=${encodeURIComponent(apiKey)}`, {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
@@ -183,7 +267,11 @@ const ParentAccounts = (() => {
         method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: "grant_type=refresh_token&refresh_token=" + encodeURIComponent(sess.refreshToken)
       });
-      if (r.ok) { const j = await r.json(); sess.refreshToken = j.refresh_token || sess.refreshToken; sess.idToken = j.id_token || sess.idToken; return true; }
+      if (r.ok) {
+        const j = await r.json(); sess.refreshToken = j.refresh_token || sess.refreshToken; sess.idToken = j.id_token || sess.idToken; sess.uid = j.user_id || sess.uid;
+        try { (localStorage.getItem(STORE) ? localStorage : sessionStorage).setItem(STORE, JSON.stringify(sess)); } catch {}
+        return true;
+      }
       return false;
     } catch { return true; }          // offline: let them in with their saved session
   }
@@ -196,25 +284,32 @@ const ParentAccounts = (() => {
     b.appendChild(el("span", null, sess.name || sess.email));
     const menu = el("div", "parent-pill-menu hidden");
     menu.appendChild(el("p", "parent-pill-email", sess.email));
-    const out = el("button", "small-btn", "Sign out"); out.type = "button";
-    out.addEventListener("click", () => { clear(); location.reload(); });
+    const signOut = async () => { await ParentRegistry.signedOut(currentPA, read() || sess); clear(); location.href = "index.html"; };
+    const out = el("button", "parent-pill-out", "Sign out"); out.type = "button";
+    out.insertAdjacentHTML("afterbegin", '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg>');
+    out.addEventListener("click", signOut);
     const pw = el("button", "small-btn", "Change password"); pw.type = "button";
     pw.addEventListener("click", async () => {
       try { await call("accounts:sendOobCode", { requestType: "PASSWORD_RESET", email: sess.email }); alert("We emailed you a link to choose a new password: " + sess.email); }
       catch (e) { alert(e.message); }
     });
-    menu.append(pw, out);
+    menu.append(pw);
     b.addEventListener("click", () => menu.classList.toggle("hidden"));
     document.addEventListener("click", e => { if (!pill.contains(e.target)) menu.classList.add("hidden"); });
-    pill.append(b, menu);
+    pill.append(b, out, menu);
     document.body.appendChild(pill);
   }
 
   async function check(c, reveal) {
     const pa = c.settings.parentAccounts;
     apiKey = pa.apiKey;
+    currentPA = pa;
     const sess = read();
-    if (sess && sess.refreshToken && await stillValid(sess)) { badge(sess); return reveal(); }
+    if (sess && sess.refreshToken && await stillValid(sess)) {
+      const t = await ParentRegistry.touch(pa, sess);
+      if (t === "blocked") { clear(); return blockedScreen(c); }
+      badge(sess); return reveal();
+    }
     try { if (localStorage.getItem("classroom_teacher_unlocked") || sessionStorage.getItem("classroom_teacher_unlocked")) return reveal(); } catch {}
     if (sess) clear();
     showLogin(c, reveal);
@@ -248,8 +343,11 @@ const ParentAccounts = (() => {
           links(link("Forgot password?", () => { mode = "forgot"; render(); }), link("Create a profile", () => { mode = "signup"; render(); })));
         submit = async () => {
           const j = await call("accounts:signInWithPassword", { email: email.value.trim(), password: pw.value, returnSecureToken: true });
-          save({ email: j.email, name: j.displayName || "", refreshToken: j.refreshToken, idToken: j.idToken }, rem.checked);
-          gate.remove(); badge({ email: j.email, name: j.displayName }); reveal();
+          const s = { email: j.email, name: j.displayName || "", refreshToken: j.refreshToken, idToken: j.idToken, uid: j.localId };
+          const t = await ParentRegistry.touch(pa, s, null, true);
+          if (t === "blocked") throw new Error(BLOCKED_MSG);
+          save(s, rem.checked);
+          gate.remove(); badge(s); reveal();
         };
         setTimeout(() => email.focus(), 0);
       } else if (mode === "signup") {
@@ -270,8 +368,11 @@ const ParentAccounts = (() => {
           const j = await call("accounts:signUp", { email: email.value.trim(), password: pw.value, returnSecureToken: true });
           const display = name.value.trim() + (child.value.trim() ? ` (parent of ${child.value.trim()})` : "");
           const u = await call("accounts:update", { idToken: j.idToken, displayName: display, returnSecureToken: true }).catch(() => ({}));
-          save({ email: j.email, name: display, refreshToken: u.refreshToken || j.refreshToken, idToken: u.idToken || j.idToken }, rem.checked);
-          gate.remove(); badge({ email: j.email, name: display }); reveal();
+          const s = { email: j.email, name: display, refreshToken: u.refreshToken || j.refreshToken, idToken: u.idToken || j.idToken, uid: j.localId };
+          const t = await ParentRegistry.touch(pa, s, { name: name.value.trim(), child: child.value.trim(), created: new Date() }, true);
+          if (t === "blocked") throw new Error(BLOCKED_MSG);
+          save(s, rem.checked);
+          gate.remove(); badge(s); reveal();
         };
         setTimeout(() => name.focus(), 0);
       } else {
@@ -303,10 +404,10 @@ const ParentAccounts = (() => {
   async function signIn(key, email, password, remember) {
     apiKey = key;
     const j = await call("accounts:signInWithPassword", { email, password, returnSecureToken: true });
-    save({ email: j.email, name: j.displayName || "", refreshToken: j.refreshToken, idToken: j.idToken }, remember);
+    save({ email: j.email, name: j.displayName || "", refreshToken: j.refreshToken, idToken: j.idToken, uid: j.localId }, remember);
     return j;
   }
-  return { check, signIn, _call: call, _setKey: k => { apiKey = k; } };
+  return { check, signIn, _call: call, _setKey: k => { apiKey = k; }, BLOCKED_MSG };
 })();
 
 /* ---------------- Teacher lock (main site, Classroom Tools, Teacher Tools) ----------------

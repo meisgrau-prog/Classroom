@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
   <title>Teacher Portal – Rabbi Eisgrau</title>
-  <link rel="stylesheet" href="style.css?v=20261218">
-  <script src="data.js?v=20261218"></script>
-  <script src="common.js?v=20261218"></script>
+  <link rel="stylesheet" href="style.css?v=20261222">
+  <script src="data.js?v=20261222"></script>
+  <script src="common.js?v=20261222"></script>
 </head>
 <body class="portal tshell">
   <aside class="ts-side">
@@ -167,6 +167,7 @@
         <button class="tab" role="tab" data-tab="programs" aria-selected="false">Programs</button>
         <button class="tab" role="tab" data-tab="banners" aria-selected="false">Banners</button>
         <button class="tab" role="tab" data-tab="access" aria-selected="false">Access &amp; Wording</button>
+        <button class="tab" role="tab" data-tab="parents" aria-selected="false">Parents</button>
       </div>
 
       <div id="panel-classwork" class="panel"></div>
@@ -180,6 +181,7 @@
         </div>
         <div id="banners-editor"></div>
       </div>
+      <div id="panel-parents" class="panel hidden"></div>
       <div id="panel-access" class="panel hidden">
       <div class="card" id="pp-settings-card">
         <h2 class="section-title">Access &amp; Wording</h2>
@@ -263,13 +265,14 @@
           <details>
             <summary>How to set up parent profiles (one time, about 10 minutes)</summary>
             <ol class="steps">
-              <li>Go to <a href="https://console.firebase.google.com/" target="_blank" rel="noopener">console.firebase.google.com</a> and sign in with a Google account. Click <b>Create a project</b>, name it (e.g. <i>Rabbi Eisgrau Class</i>), and finish. Google Analytics can be off. The free plan is all you need.</li>
-              <li>In the left menu choose <b>Build → Authentication → Get started</b>. Under <b>Sign-in method</b>, choose <b>Email/Password</b>, switch it <b>on</b>, and <b>Save</b>.</li>
-              <li>Click the <b>gear ⚙ → Project settings</b>. Copy the <b>Project ID</b>. Under <b>Your apps</b>, click the <b>&lt;/&gt;</b> (Web) button, give it a nickname, and <b>Register app</b>. Copy the <b>apiKey</b> value (it starts with <code>AIza</code>).</li>
-              <li>Paste both above, click <b>Test connection</b>, choose <b>Parent profiles</b> above, and click <b>Save &amp; Publish</b>.</li>
-              <li>Optional: in Authentication → <b>Templates</b> → <b>Password reset</b>, change the sender name to your name so families recognize the email.</li>
+              <li>Go to <a href="https://console.firebase.google.com/" target="_blank" rel="noopener">console.firebase.google.com</a> and sign in with a Google account. Click <b>Create a project</b>, name it (e.g. <i>Rabbi Eisgrau Class</i>), turn <b>Google Analytics off</b>, and finish. The free plan is all you need.</li>
+              <li>Left menu: <b>Security → Authentication → Get started</b> (if you don't see it, click <b>All products</b> or search “Authentication” at the top). On the <b>Sign-in method</b> tab choose <b>Email/Password</b>, switch the first toggle <b>on</b>, and <b>Save</b>.</li>
+              <li>Click the <b>gear ⚙ → Project settings</b>. Copy the <b>Project ID</b>.</li>
+              <li>Under <b>Your apps</b>, click <b>&lt;/&gt;</b> (Web), name it <i>Class website</i> (leave Firebase Hosting unchecked), and <b>Register app</b>. Copy only the <b>apiKey</b> value — it starts with <code>AIza</code>.</li>
+              <li>Paste both above, click <b>Test connection</b> (it should say “✓ Connected”), set a <b>Class password</b> for the class code, and click <b>Save &amp; Publish</b>.</li>
+              <li>Optional: Security → Authentication → <b>Templates → Password reset</b> → change the sender name to your name so families recognize the email.</li>
             </ol>
-            <p class="help">Give families the Parent Portal address and the class code. To remove a parent, open “See &amp; remove parents”, find their email, and choose <b>Disable account</b> or <b>Delete account</b>. They're signed out on their next visit.</p>
+            <p class="help">Give families the Parent Portal address and the class code. To remove a parent, open the <b>Parents</b> tab, where you can see, edit, block or delete parent profiles.</p>
           </details>
         </div>
       </div>
@@ -284,8 +287,9 @@
   </div>
   </div>
 
-  <script src="portal.js?v=20261218"></script>
-  <script src="classroom.js?v=20261218"></script>
-  <script src="teacherhome.js?v=20261218"></script>
+  <script src="portal.js?v=20261222"></script>
+  <script src="classroom.js?v=20261222"></script>
+  <script src="parentlist.js?v=20261222"></script>
+  <script src="teacherhome.js?v=20261222"></script>
 </body>
 </html>
