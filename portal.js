@@ -165,24 +165,11 @@ async function connect(t) {
 }
 function openEditor() {
   showOnly(null);
-  $("mode-switch").classList.remove("hidden");
-  setMode("website");
-  $("signout").classList.remove("hidden");
-  $("changepw-open").classList.remove("hidden");
+  $("editor").classList.remove("hidden");
+  $("savebar").classList.remove("hidden");
   renderAll();
   setDirty(false);
 }
-// Website editor  |  Classroom tools
-function setMode(mode) {
-  const site = mode === "website";
-  document.querySelectorAll(".mode-btn").forEach(b => b.setAttribute("aria-selected", b.dataset.mode === mode ? "true" : "false"));
-  $("editor").classList.toggle("hidden", !site);
-  $("savebar").classList.toggle("hidden", !site);
-  $("classroom").classList.toggle("hidden", site);
-  if (!site && window.Classroom) Classroom.open($("classroom"));
-  window.scrollTo({ top: 0 });
-}
-document.querySelectorAll(".mode-btn").forEach(b => b.addEventListener("click", () => setMode(b.dataset.mode)));
 
 function busy(btn, on, text) {
   btn.disabled = on;
@@ -295,7 +282,8 @@ $("signout").addEventListener("click", () => {
   if (dirty && !confirm("You have unsaved changes. Sign out anyway?")) return;
   forgetToken();
   dirty = false;
-  location.reload();
+  try { [localStorage, sessionStorage].forEach(s => { s.removeItem("classroom_teacher_unlocked"); s.removeItem("classroom_site_unlocked"); }); } catch {}
+  location.href = "index.html";
 });
 
 // If someone opens the portal on http://, switch to the secure https:// address.
@@ -763,6 +751,9 @@ function accessControls() {
       : v === "password" ? (lock.hash ? "Families need the class password." : "Set a class password below, then Save & Publish.")
       : (pa.apiKey ? "Parents sign in with their own profiles." : "Finish the Parent Profiles setup below, then Save & Publish.");
     if ((v === "password" && !lock.hash) || (v === "profiles" && !pa.apiKey)) msg.className = "status err";
+    // Only show the setup box for the choice that's picked (no duplicate on/off switches).
+    $("lock-box").classList.toggle("hidden", v === "open" || (v === "profiles" && pa.requireCode === false));
+    $("pa-box").classList.toggle("hidden", v !== "profiles");
   };
   radios.forEach(r => r.onchange = () => {
     if (r.value === "open") { lock.on = false; pa.on = false; }
@@ -782,14 +773,14 @@ function parentAccountControls() {
     state.textContent = pa.on ? "On" : "Off";
     users.href = pa.projectId ? `https://console.firebase.google.com/project/${encodeURIComponent(pa.projectId)}/authentication/users` : "https://console.firebase.google.com/";
     if (pa.on && !pa.apiKey) { msg.className = "status err"; msg.textContent = "Paste your Firebase Web API key before saving (setup steps below)."; }
-    else if (pa.on && pa.requireCode && !content.settings.siteLock.hash) { msg.className = "status err"; msg.textContent = "Set a website password above — it's the class code parents type when creating a profile."; }
+    else if (pa.on && pa.requireCode && !content.settings.siteLock.hash) { msg.className = "status err"; msg.textContent = "Set a class password above — it's the class code parents type when creating a profile."; }
     else if (!msg.dataset.keep) { msg.className = "status"; msg.textContent = pa.on ? "Parents sign in with their own profiles." : "Off — the Parent Portal uses the one class password (if the lock is on)."; }
   };
   on.checked = !!pa.on; key.value = pa.apiKey || ""; proj.value = pa.projectId || ""; code.checked = pa.requireCode !== false;
   on.onchange = () => { pa.on = on.checked; changed(); delete msg.dataset.keep; sync(); if (window.__refreshAccess) window.__refreshAccess(); };
   key.oninput = () => { pa.apiKey = key.value.trim(); changed(); delete msg.dataset.keep; sync(); };
   proj.oninput = () => { pa.projectId = proj.value.trim(); changed(); sync(); };
-  code.onchange = () => { pa.requireCode = code.checked; changed(); delete msg.dataset.keep; sync(); };
+  code.onchange = () => { pa.requireCode = code.checked; changed(); delete msg.dataset.keep; sync(); if (window.__refreshAccess) window.__refreshAccess(); };
   $("pa-test").onclick = async () => {
     msg.dataset.keep = "1";
     if (!pa.apiKey) { msg.className = "status err"; msg.textContent = "Paste the Web API key first."; return; }
@@ -814,10 +805,9 @@ function lockControls() {
   const status = () => {
     state.textContent = lock.on ? "On" : "Off";
     msg.className = "status" + (lock.on && !lock.hash ? " err" : "");
-    msg.textContent = lock.on && !lock.hash ? "Set a password below before saving."
-      : lock.on ? "The website is locked. Visitors need the password."
-      : lock.hash ? "The website is open to everyone. (A password is saved for when you turn the lock on.)"
-      : "The website is open to everyone.";
+    msg.textContent = lock.on && !lock.hash ? "Set a class password below before saving."
+      : lock.hash ? "✓ A class password is set. Type a new one above to change it."
+      : "No class password set yet.";
   };
   on.checked = !!lock.on;
   on.onchange = () => { lock.on = on.checked; changed(); status(); if (window.__refreshAccess) window.__refreshAccess(); };

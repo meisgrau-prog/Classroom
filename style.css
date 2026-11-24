@@ -1489,7 +1489,8 @@ html.gate-wait body > :not(.site-gate) { visibility: hidden; }
 @media (max-width: 520px) { .cr-menu { grid-template-columns: repeat(2, minmax(0,1fr)) !important; } }
 
 /* ================= Teacher Area shell (side menu) ================= */
-body.tshell { display: grid; grid-template-columns: 260px minmax(0, 1fr); min-height: 100vh; background: var(--cream); }
+body.tshell { display: grid; grid-template-columns: 260px minmax(0, 1fr); align-items: start; height: auto; min-height: 100vh; background: var(--cream); }
+html:has(body.tshell) { height: auto; }
 .ts-side {
   position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; gap: 6px;
   padding: 22px 14px; background: linear-gradient(180deg, #14213d 0%, #0f1830 100%); color: #e9e3d6;
@@ -1509,7 +1510,8 @@ body.tshell { display: grid; grid-template-columns: 260px minmax(0, 1fr); min-he
 .ts-item.active { background: rgba(201,169,106,.16); color: var(--gold-soft); font-weight: 600; }
 .ts-item.active::before { content: ""; position: absolute; left: -14px; top: 8px; bottom: 8px; width: 4px; border-radius: 0 4px 4px 0; background: var(--gold); }
 .ts-out { margin-top: auto; color: #cfc6b4; }
-.ts-main { min-width: 0; padding: clamp(18px, 3vw, 36px) clamp(16px, 3.5vw, 44px) 60px; }
+.ts-side { overflow-y: auto; scrollbar-width: thin; }
+.ts-main { min-height: 100vh; min-width: 0; padding: clamp(18px, 3vw, 36px) clamp(16px, 3.5vw, 44px) 60px; }
 .ts-main > main, .ts-main > section { max-width: 1100px; }
 .tshell .ts-main #classroom, .tshell .ts-main #phonelog { max-width: 1100px; }
 /* dashboard */
@@ -1733,3 +1735,10 @@ body.tshell { display: grid; grid-template-columns: 260px minmax(0, 1fr); min-he
 .gb-set-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; margin-bottom: 8px; }
 .portal .gb-set-f { display: flex; flex-direction: column; gap: 4px; margin: 0; font-weight: 500; font-size: .85rem; color: var(--muted); }
 .gb-set-f input[type=checkbox] { width: 20px; height: 20px; }
+
+/* Parent Portal Controls inside the Teacher Area shell */
+.tshell .ts-main > main { max-width: 1100px; padding: 0; margin: 0; }
+.tshell .savebar { left: 260px; }
+.pp-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin: 0 0 18px; }
+.pp-head h1 { font-family: var(--serif); font-weight: 600; font-size: clamp(1.9rem, 3.6vw, 2.6rem); color: var(--navy); margin: 0; }
+@media (max-width: 860px) { .tshell .savebar { left: 0; } }
