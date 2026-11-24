@@ -2039,10 +2039,13 @@ html:has(body.tshell) { height: auto; }
 @media (max-width: 600px) { .pp-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 10px; gap: 10px; } }
 
 /* ================= Parent Portal: visible sign out ================= */
-.parent-pill { display: flex; align-items: center; gap: 6px; }
-.parent-pill-out { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 999px; border: 1px solid rgba(201,169,106,.7); background: #14213d; color: #f3e6c4; font: 600 .9rem var(--sans); cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,.18); transition: background .2s; }
-.parent-pill-out:hover { background: #1f3158; }
-.parent-pill-out svg { width: 16px; height: 16px; }
+.parent-pill-menu { min-width: 230px; padding: 10px; }
+.parent-pill-email { padding: 4px 6px 8px; margin: 0 0 4px !important; border-bottom: 1px solid #eee6d6; }
+.parent-pill-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 10px; border: 0; border-radius: 8px; background: none; color: var(--navy); font: 600 .95rem var(--sans); text-align: left; cursor: pointer; transition: background .15s; }
+.parent-pill-item:hover { background: #f6f1e6; }
+.parent-pill-item svg { width: 18px; height: 18px; flex: none; color: var(--gold); }
+.parent-pill-item.danger { color: #b42318; } .parent-pill-item.danger svg { color: #b42318; }
+.parent-pill-btn[aria-expanded=true] { box-shadow: 0 0 0 3px rgba(201,169,106,.45), 0 4px 14px rgba(0,0,0,.18); }
 
 /* ================= Parents list (Parent Portal Settings) ================= */
 .plist-who { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 10px 14px; margin-bottom: 14px; background: #eef6f1; border: 1px solid #b7e2c6; border-radius: 12px; font-size: .92rem; }

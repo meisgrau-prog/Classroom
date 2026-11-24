@@ -208,14 +208,33 @@ const ParentRegistry = (() => {
   return { fs, sha, patch, fromDoc, toFields, touch, signedOut, isBlocked };
 })();
 
-/* A clear "Sign out" for families who opened the Parent Portal with the class password. */
+/* The user button (bottom-right of the Parent Portal) and its menu. */
+const SIGNOUT_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg>';
+const KEY_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M10.8 12.2L21 2M17 6l3 3M15 8l2 2"/></svg>';
+function userMenuItem(text, icon, fn, cls) {
+  const b = el("button", "parent-pill-item" + (cls ? " " + cls : ""), text); b.type = "button";
+  b.insertAdjacentHTML("afterbegin", icon);
+  b.addEventListener("click", fn);
+  return b;
+}
+function wireUserMenu(pill, btn, menu) {
+  btn.setAttribute("aria-haspopup", "true"); btn.setAttribute("aria-expanded", "false");
+  const set = open => { menu.classList.toggle("hidden", !open); btn.setAttribute("aria-expanded", open ? "true" : "false"); };
+  btn.addEventListener("click", () => set(menu.classList.contains("hidden")));
+  document.addEventListener("click", e => { if (!pill.contains(e.target)) set(false); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") set(false); });
+}
 function classSignOutButton() {
   if (document.querySelector(".parent-pill")) return;
   const pill = el("div", "parent-pill");
-  const out = el("button", "parent-pill-out", "Sign out"); out.type = "button";
-  out.insertAdjacentHTML("afterbegin", '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg>');
-  out.addEventListener("click", () => { try { localStorage.removeItem(UNLOCK_KEY); sessionStorage.removeItem(UNLOCK_KEY); } catch {} location.href = "index.html"; });
-  pill.appendChild(out);
+  const b = el("button", "parent-pill-btn"); b.type = "button";
+  b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>';
+  b.appendChild(el("span", null, "Class family"));
+  const menu = el("div", "parent-pill-menu hidden");
+  menu.appendChild(el("p", "parent-pill-email", "Signed in with the class password"));
+  menu.appendChild(userMenuItem("Sign out", SIGNOUT_ICON, () => { try { localStorage.removeItem(UNLOCK_KEY); sessionStorage.removeItem(UNLOCK_KEY); } catch {} location.href = "index.html"; }, "danger"));
+  wireUserMenu(pill, b, menu);
+  pill.append(b, menu);
   document.body.appendChild(pill);
 }
 
@@ -285,18 +304,14 @@ const ParentAccounts = (() => {
     const menu = el("div", "parent-pill-menu hidden");
     menu.appendChild(el("p", "parent-pill-email", sess.email));
     const signOut = async () => { await ParentRegistry.signedOut(currentPA, read() || sess); clear(); location.href = "index.html"; };
-    const out = el("button", "parent-pill-out", "Sign out"); out.type = "button";
-    out.insertAdjacentHTML("afterbegin", '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg>');
-    out.addEventListener("click", signOut);
-    const pw = el("button", "small-btn", "Change password"); pw.type = "button";
-    pw.addEventListener("click", async () => {
+    const out = userMenuItem("Sign out", SIGNOUT_ICON, signOut, "danger");
+    const pw = userMenuItem("Change password", KEY_ICON, async () => {
       try { await call("accounts:sendOobCode", { requestType: "PASSWORD_RESET", email: sess.email }); alert("We emailed you a link to choose a new password: " + sess.email); }
       catch (e) { alert(e.message); }
     });
-    menu.append(pw);
-    b.addEventListener("click", () => menu.classList.toggle("hidden"));
-    document.addEventListener("click", e => { if (!pill.contains(e.target)) menu.classList.add("hidden"); });
-    pill.append(b, out, menu);
+    menu.append(pw, out);
+    wireUserMenu(pill, b, menu);
+    pill.append(b, menu);
     document.body.appendChild(pill);
   }
 
