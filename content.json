@@ -97,7 +97,25 @@
       "hash": "q3lg7LEtzXCA+oukfnERhuBNLDTHNzJ9XhNyVgaLiFI=",
       "salt": "NNHarptWF2uaHqeqB5LX9g==",
       "iterations": 150000
-    }
+    },
+    "homeText": {
+      "message": "",
+      "classwork": "Classwork",
+      "homework": "Homework",
+      "news": "News",
+      "programs": "Programs",
+      "contact": "Contact"
+    },
+    "parentAccounts": {
+      "on": true,
+      "apiKey": "AIzaSyA1w0SJUL-Km8DfWYFJdFqwnzKcgk8ltXo",
+      "projectId": "eisgrau-class",
+      "requireCode": true
+    },
+    "grade": "",
+    "phone": "848-210-6960",
+    "contactEmail": "meisgrau@ykwaterbury.org",
+    "formEmail": ""
   },
   "programs": [
     {
