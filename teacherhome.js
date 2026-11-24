@@ -15,6 +15,7 @@
     ["gbmissing", "Gradebook: grades still to enter", "Categories with no grades yet today / this week", true],
     ["gbaverages", "Gradebook: class averages", "This week's class average for each category", true],
     ["gbstars", "Gradebook: top students", "Highest averages this week", false],
+    ["support", "Student Support: plans", "Things you planned to do to help a student, oldest first", true],
     ["duecalls", "Families due for a call", "Names of families you haven't called in a while", false],
     ["recent", "Recent calls", "The last few calls you logged", false],
     ["absent", "Absent today", "Students marked absent in Classroom Tools", false],
@@ -162,6 +163,13 @@
       gbstars: () => gb && card("⭐ Top students this week", ["Gradebook", "teacher-tools.html#gradebook"],
         gb.stars.length ? h("ol", { class: "th-list th-ol" }, gb.stars.map(s => h("li", null, h("strong", null, s.name), h("span", null, Math.round(s.p) + "%"))))
           : none(`Nobody at ${gb.good}% or above yet this week.`)),
+      support: () => {
+        const s = read("teacher_support_v1", null);
+        const plans = s && Array.isArray(s.entries) ? s.entries.filter(e => e.kind === "plan").sort((a, b) => a.date < b.date ? -1 : 1) : [];
+        return card("Support plans", ["Student Support", "teacher-tools.html#support"],
+          plans.length ? h("ul", { class: "th-list" }, plans.slice(0, 8).map(e => h("li", null, h("strong", null, e.student), h("span", null, e.text.length > 70 ? e.text.slice(0, 70) + "…" : e.text))))
+            : none("No plans waiting."));
+      },
       absent: () => {
         const a = absentList();
         return card("Absent today", ["Classroom Tools", "classroom.html"], a.length ? h("div", { class: "th-tags" }, a.map(n => h("span", { class: "th-tag" }, n))) : none("Nobody marked absent."));
@@ -173,9 +181,9 @@
         return card("My reminders", null, ta);
       },
       quick: () => h("div", null, h("h2", { class: "ts-h2" }, "Quick access"), h("section", { class: "ts-cards" },
-        [["portal.html", ICON.portal, "Parent Portal Controls", "Post classwork, homework, news, programs & banners"],
-         ["classroom.html", ICON.class, "Classroom Tools", "Students, groups, random picks, raffle, prize boxes"],
-         ["teacher-tools.html", ICON.phone, "Teacher Tools", "Phone log and gradebook"],
+        [["classroom.html", ICON.class, "Classroom Tools", "Students, groups, random picks, raffle, prize boxes"],
+         ["teacher-tools.html", ICON.phone, "Teacher Tools", "Phone log, gradebook, student info, support & PDF tools"],
+         ["portal.html", ICON.portal, "Parent Portal Settings", "Post classwork, homework, news & banners; who can see it"],
          ["parents.html", ICON.eye, "View Parent Portal", "See the site the way families see it"]].map(([href, ico, t, s]) =>
           h("a", { class: "ts-card", href }, h("span", { class: "ts-card-ico", html: ico }), h("strong", null, t), h("small", null, s)))))
     };

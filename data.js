@@ -13,6 +13,8 @@ const SITE = {
   // Shown on the welcome page and at the top of every page
   welcome: "Welcome to My Class",
   teacherName: "Rabbi Eisgrau",
+  // Grade / class shown under the name (can also be set in Teacher Area → Settings)
+  grade: "",
 
   // Your email address shown on the Contact page
   contactEmail: "meisgrau@ykwaterbury.org",

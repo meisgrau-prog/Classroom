@@ -724,8 +724,9 @@
       box.innerHTML = "";
       d.cats.forEach((c, i) => {
         let card;
-        const subs = h("textarea", { class: "pl-set-subs", rows: String(Math.max(2, (c.subjects || []).length + 1)), placeholder: "Subjects, one per line (leave empty for one column per day)", oninput: e => { c.subjects = lines(e.target.value); dirty(); } });
-        subs.value = (c.subjects || []).join("\n");
+        const subs = c.better === "text" ? null : h("p", { class: "gb-subj-line" }, (c.subjects || []).length
+          ? ["By subject: ", h("strong", null, c.subjects.join(" · "))] : "One grade per day (no subjects)",
+          " — ", h("a", { href: "#", onclick: e => { e.preventDefault(); subjCard.scrollIntoView({ behavior: "smooth", block: "start" }); } }, "change subjects"));
         const field = (label, input) => h("label", { class: "gb-set-f" }, h("span", null, label), input);
         card = h("div", { class: "pl-set-cat", style: { "--c": c.color, "--bg": c.color + "14" } },
           h("div", { class: "pl-set-cat-head" },
@@ -747,6 +748,59 @@
       });
     }
     drawCats();
+
+    // subjects: one master list + which categories use which subjects
+    const uniq = a => a.filter((x, i) => x && a.indexOf(x) === i);
+    d.subjects = uniq((d.subjects || []).concat(...d.cats.map(c => c.subjects || [])));
+    d._renames = [];
+    const subjBox = h("div", { class: "gb-subj" });
+    let subjCard;
+    function orderSubs(c) { c.subjects = d.subjects.filter(s => (c.subjects || []).includes(s)); }
+    function drawSubjects() {
+      subjBox.innerHTML = "";
+      const list = h("div", { class: "gb-subj-list" });
+      d.subjects.forEach((s, i) => {
+        const inp = h("input", { type: "text", value: s, "aria-label": "Subject name", dir: "auto" });
+        inp.addEventListener("change", () => {
+          const nv = inp.value.replace(/\s+/g, " ").trim();
+          if (!nv || nv === s) { inp.value = s; return; }
+          if (d.subjects.includes(nv)) { alert(`There's already a subject called “${nv}”.`); inp.value = s; return; }
+          d.subjects[i] = nv;
+          d.cats.forEach(c => { if (c.subjects) c.subjects = c.subjects.map(x => x === s ? nv : x); });
+          d._renames.push([s, nv]); dirty(); drawSubjects(); drawCats();
+        });
+        list.appendChild(h("div", { class: "gb-subj-row" }, inp,
+          h("button", { type: "button", class: "small-btn", "aria-label": "Move up", disabled: i === 0 ? true : null, onclick: () => { [d.subjects[i - 1], d.subjects[i]] = [d.subjects[i], d.subjects[i - 1]]; d.cats.forEach(orderSubs); dirty(); drawSubjects(); drawCats(); } }, "↑"),
+          h("button", { type: "button", class: "small-btn", "aria-label": "Move down", disabled: i === d.subjects.length - 1 ? true : null, onclick: () => { [d.subjects[i + 1], d.subjects[i]] = [d.subjects[i], d.subjects[i + 1]]; d.cats.forEach(orderSubs); dirty(); drawSubjects(); drawCats(); } }, "↓"),
+          h("button", { type: "button", class: "small-btn danger", onclick: () => {
+            if (!confirm(`Remove the subject “${s}” from every category? (Grades already entered are kept and come back if you add it again.)`)) return;
+            d.subjects.splice(i, 1); d.cats.forEach(c => { if (c.subjects) c.subjects = c.subjects.filter(x => x !== s); }); dirty(); drawSubjects(); drawCats();
+          } }, "Remove")));
+      });
+      const add = h("input", { type: "text", placeholder: "New subject (e.g. נביא)", dir: "auto", "aria-label": "New subject" });
+      const addIt = () => {
+        const v = add.value.replace(/\s+/g, " ").trim(); if (!v) return;
+        if (d.subjects.includes(v)) { add.select(); return; }
+        d.subjects.push(v); dirty(); drawSubjects(); drawCats();
+        const nx = subjBox.querySelector(".gb-subj-add input"); if (nx) nx.focus();
+      };
+      add.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addIt(); } });
+      subjBox.append(list, h("div", { class: "gb-subj-add" }, add, h("button", { type: "button", class: "button secondary", onclick: addIt }, "+ Add subject")));
+      // grid: categories × subjects
+      const graded = d.cats.filter(c => c.better !== "text");
+      if (d.subjects.length && graded.length) {
+        const t = h("table", { class: "gb-subj-grid" },
+          h("thead", null, h("tr", null, h("th", null, "Category"), d.subjects.map(s => h("th", { dir: "auto" }, s)))),
+          h("tbody", null, graded.map(c => h("tr", null,
+            h("th", null, h("span", { class: "gb-subj-dot", style: { background: c.color } }), c.name),
+            d.subjects.map(s => h("td", null, h("input", { type: "checkbox", "aria-label": `${c.name}: ${s}`, checked: (c.subjects || []).includes(s) ? true : null,
+              onchange: e => { const cur = new Set(c.subjects || []); e.target.checked ? cur.add(s) : cur.delete(s); c.subjects = [...cur]; orderSubs(c); dirty(); drawCats(); } })))))));
+        subjBox.append(h("p", { class: "label-text", style: "margin:16px 0 6px" }, "Which categories are graded by subject?"),
+          h("p", { class: "help", style: "margin:0 0 8px" }, "Check a box to give that category a column for the subject. A category with no boxes checked gets one grade per day."),
+          h("div", { class: "gb-scroll" }, t));
+      }
+    }
+    drawSubjects();
     // students
     const stu = h("textarea", { class: "pl-names", rows: "12", placeholder: "One name per line (First Last)" });
     stu.value = students().join("\n");
@@ -774,7 +828,10 @@
       h("div", { class: "card" }, h("h3", null, "Students"), h("p", { class: "help" }, "One per line, first name then last name. The same list is used by the Phone Log and Classroom Tools."), stu),
       h("div", { class: "card" }, h("h3", null, "Categories"),
         h("p", { class: "help" }, "Everything you grade. Add subjects to a category (like Tests: גמרא, חומש) to grade each subject separately; they're averaged together. “Count” categories (like Behavior) are added up, and lower is better."),
-        box, h("div", { class: "actions" }, h("button", { type: "button", class: "button secondary", onclick: () => { d.cats.push({ id: "c" + Date.now().toString(36), name: "New category", freq: "daily", max: 10, better: "high", subjects: [], color: "#0f766e", show: true }); dirty(); drawCats(); } }, "+ Add category"))),
+        box, h("div", { class: "actions" }, h("button", { type: "button", class: "button secondary", onclick: () => { d.cats.push({ id: "c" + Date.now().toString(36), name: "New category", freq: "daily", max: 10, better: "high", subjects: [], color: "#0f766e", show: true }); dirty(); drawCats(); drawSubjects(); } }, "+ Add category"))),
+      subjCard = h("div", { class: "card", id: "gb-subjects" }, h("h3", null, "Subjects"),
+        h("p", { class: "help" }, "Your subjects, in the order they show. Type over a name to rename it (its grades come along), add new ones, or remove ones you don't teach."),
+        subjBox),
       h("div", { class: "pl-set-two" },
         h("div", { class: "card" }, h("h3", null, "School days"), h("p", { class: "help" }, "Which days get a column for daily categories."), dayBox,
           h("p", { class: "pl-set-row" }, "Weeks start on", startSel)),
@@ -791,7 +848,13 @@
           if (!d.days.length) { msg.className = "status err"; msg.textContent = "Choose at least one school day."; return; }
           d.cats.forEach(c => { c.name = c.name.trim() || "Untitled"; });
           (d._deleted || []).forEach(id => delete G.grades[id]); delete d._deleted;
-          setStudents(names); G.settings = d; save(); refreshAll();
+          // renamed subjects: move their grades to the new name
+          (d._renames || []).forEach(([from, to]) => Object.values(G.grades).forEach(a => {
+            if (!a[from]) return; const dst = a[to] || (a[to] = {});
+            Object.entries(a[from]).forEach(([date, row]) => { dst[date] = Object.assign(dst[date] || {}, row); }); delete a[from];
+          }));
+          delete d._renames; d._renames = [];
+          const keep = d._renames; delete d._renames; setStudents(names); G.settings = JSON.parse(JSON.stringify(d)); d._renames = keep || []; save(); refreshAll();
           msg.className = "status ok"; msg.textContent = "✓ Settings saved.";
         } }, "Save settings"),
         h("button", { type: "button", class: "small-btn", onclick: () => { if (confirm("Put the gradebook settings back to the original? (Grades are kept.)")) { G.settings = DEFAULTS(); save(); drawSettings(); } } }, "Reset to original"),

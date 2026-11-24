@@ -165,19 +165,21 @@ async function connect(t) {
 }
 // One page, two views: "Parent Portal Controls" (posting) and "Settings" (portal.html#settings).
 function portalView() {
-  const settings = location.hash === "#settings";
-  $("settings-card").classList.toggle("hidden", !settings);
-  $("posts-area").classList.toggle("hidden", settings);
-  $("home-settings").classList.toggle("hidden", !settings);
-  if (settings && window.TeacherHome && !$("home-settings").children.length) TeacherHome.settingsCard($("home-settings"));
-  $("pp-title").textContent = settings ? "Settings" : "Parent Portal Controls";
-  $("changepw-open").classList.toggle("hidden", !settings);
+  const view = location.hash === "#settings" ? "settings" : "posts";
+  const TITLES = { posts: "Parent Portal Settings", settings: "Settings" };
+  $("settings-card").classList.toggle("hidden", view !== "settings");
+  $("home-settings").classList.toggle("hidden", view !== "settings");
+  $("posts-area").classList.toggle("hidden", view !== "posts");
+  if (view === "settings" && window.TeacherHome && !$("home-settings").children.length) TeacherHome.settingsCard($("home-settings"));
+  if (location.hash === "#portal-settings" || location.hash === "#access") { const t = document.querySelector('.tab[data-tab="access"]'); if (t) t.click(); }
+  $("pp-title").textContent = TITLES[view];
+  $("changepw-open").classList.toggle("hidden", view !== "settings");
   document.querySelectorAll(".ts-item[data-nav]").forEach(a => {
-    const on = a.dataset.nav === (settings ? "settings" : "posts");
+    const on = a.dataset.nav === view;
     a.classList.toggle("active", on);
     if (on) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
   });
-  document.title = (settings ? "Settings" : "Parent Portal Controls") + " – " + (content && content.settings ? content.settings.teacherName : SITE.teacherName);
+  document.title = TITLES[view] + " – " + (content && content.settings ? content.settings.teacherName : SITE.teacherName);
 }
 window.addEventListener("hashchange", () => { if (!$("editor").classList.contains("hidden")) { portalView(); window.scrollTo({ top: 0 }); } });
 function openEditor() {
@@ -851,13 +853,15 @@ function settingsControls() {
   const name = $("set-name"), welcome = $("set-welcome");
   name.value = content.settings.teacherName || "";
   welcome.value = content.settings.welcome || "";
-  name.oninput = () => { content.settings.teacherName = name.value; changed(); };
+  const live = () => { applyNames(content.settings.teacherName || SITE.teacherName, content.settings.welcome); applyGrade(content.settings.grade); portalView(); };
+  name.oninput = () => { content.settings.teacherName = name.value; changed(); live(); };
   welcome.oninput = () => { content.settings.welcome = welcome.value; changed(); };
-  [["set-phone", "phone"], ["set-email", "contactEmail"], ["set-formemail", "formEmail"]].forEach(([id, k]) => {
+  [["set-grade", "grade"], ["set-phone", "phone"], ["set-email", "contactEmail"], ["set-formemail", "formEmail"]].forEach(([id, k]) => {
     const inp = $(id);
     inp.value = content.settings[k] || "";
-    inp.oninput = () => { content.settings[k] = inp.value.trim(); changed(); };
+    inp.oninput = () => { content.settings[k] = inp.value.trim(); changed(); if (k === "grade") live(); };
   });
+  live();
   const ht = content.settings.homeText;
   ["message", "classwork", "homework", "news", "programs", "contact"].forEach(k => {
     const el = $("hp-" + k);

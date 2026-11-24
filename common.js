@@ -10,6 +10,11 @@ function applyHomeText(t) {
 }
 
 // Teacher name & welcome text: set in the Teacher Portal (falls back to data.js).
+function applyGrade(grade) {
+  grade = (grade || "").trim();
+  document.querySelectorAll("[data-grade]").forEach(el => { el.textContent = grade; });
+  document.querySelectorAll("[data-grade-wrap]").forEach(el => { el.hidden = !grade; });
+}
 function applyNames(name, welcome) {
   document.querySelectorAll("[data-teacher]").forEach(el => { el.textContent = name; });
   document.querySelectorAll("[data-welcome]").forEach(el => { el.textContent = welcome; });
@@ -29,9 +34,11 @@ if (!IS_PORTAL && !SIGNIN_PAGE) document.documentElement.classList.add("gate-wai
 document.addEventListener("DOMContentLoaded", () => {
   if (IS_PORTAL) return;
   applyNames(SITE.teacherName, SITE.welcome);
+  applyGrade(SITE.grade);
   if (TEACHER_PAGE) checkTeacherLock();
   loadContent().then(async c => {
     applyNames(c.settings.teacherName, c.settings.welcome);
+    applyGrade(c.settings.grade);
     applyHomeText(c.settings.homeText);
     showBanners(c);
     if (!NO_LOCK) await checkSiteLock(c);
@@ -378,12 +385,14 @@ const BANNER_COLORS = {
 function normalizeContent(c) {
   c = c || {};
   c.settings = Object.assign({ newsNewDays: 7, teacherName: SITE.teacherName, welcome: SITE.welcome }, c.settings);
-  c.settings.homeText = Object.assign({ message: "", classwork: "Classwork", homework: "Homework", news: "News", programs: "Programs", contact: "Contact Me" }, c.settings.homeText);
+  c.settings.homeText = Object.assign({ message: "", classwork: "Classwork", homework: "Homework", news: "News", programs: "Programs", contact: "Contact" }, c.settings.homeText);
+  if (c.settings.homeText.contact === "Contact Me") c.settings.homeText.contact = "Contact";   // old default
   c.settings.siteLock = Object.assign({ on: false, hash: "", salt: "", iterations: 150000 }, c.settings.siteLock);
   c.settings.parentAccounts = Object.assign({ on: false, apiKey: "", projectId: "", requireCode: true }, c.settings.parentAccounts);
   if (!c.settings.teacherName) c.settings.teacherName = SITE.teacherName;
   if (!c.settings.welcome) c.settings.welcome = SITE.welcome;
   // Contact details (Settings page in the Teacher Area); fall back to data.js.
+  if (typeof c.settings.grade !== "string") c.settings.grade = SITE.grade || "";
   ["phone", "contactEmail", "formEmail"].forEach(k => {
     if (typeof c.settings[k] !== "string") c.settings[k] = SITE[k] || "";
     if (c.settings[k] || k === "formEmail") SITE[k] = c.settings[k];

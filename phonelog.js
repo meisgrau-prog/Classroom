@@ -15,7 +15,8 @@
       { key: "behavior", label: "Behavior", color: "#c0392b", subs: ["Disrupting class", "Not following directions", "Off task", "Respect", "Physical with others", "Unkind words", "Tired/lethargic"] },
       { key: "academics", label: "Academics", color: "#2563eb", subs: ["Kriah", "Chumash", "Homework", "Incomplete classwork", "Test/quiz", "Focus/participation"] }
     ],
-    results: ["Spoke", "Left message", "No answer", "Email sent"],
+    methods: ["Phone call", "Email", "Text message", "In person", "Note home"],
+    results: ["Spoke", "Left message", "No answer", "Sent", "Got a reply"],
     who: ["Mother", "Father", "Both"],
     when: [{ label: "1 week", n: 1, unit: "weeks" }, { label: "2 weeks", n: 2, unit: "weeks" }, { label: "1 month", n: 1, unit: "months" }],
     greenWeeks: 2,
@@ -26,6 +27,7 @@
   const CATX = k => { const c = S.settings.cats.find(x => x.key === k); return c ? Object.assign({ bg: tint(c.color) }, c) : { key: k, label: k, color: "#8a867d", bg: "#f3f1ec", subs: [] }; };
   const CAT = new Proxy({}, { get: (_, k) => CATX(k) });
   const SUBS = new Proxy({}, { get: (_, k) => () => CATX(k).subs || [] });
+  const METHODS_ = () => S.settings.methods || [];
   const RESULTS_ = () => S.settings.results.length ? S.settings.results : ["Spoke"];
   const WHO_ = () => S.settings.who;
   const WHEN_ = () => S.settings.when;
@@ -45,6 +47,10 @@
       }
     }
     delete S.subjects;
+    if (!Array.isArray(S.settings.methods)) {                 // added later: how you reached them
+      S.settings.methods = DEFAULTS().methods;
+      if (JSON.stringify(S.settings.results) === JSON.stringify(["Spoke", "Left message", "No answer", "Email sent"])) S.settings.results = DEFAULTS().results;
+    }
   }
   function save() { try { localStorage.setItem(STORE, JSON.stringify(S)); } catch {} }
   function students() {
@@ -117,7 +123,7 @@
     return `linear-gradient(180deg, ${cols.map((c, i) => `${c} ${i * step}%, ${c} ${(i + 1) * step}%`).join(", ")})`;
   }
   function describe(call) {
-    return [fmtDay(call.ts) + " · " + fmtTime(call.ts), call.result, call.spoke ? "with " + call.spoke : ""].filter(Boolean).join(" · ");
+    return [fmtDay(call.ts) + " · " + fmtTime(call.ts), call.method, call.result, call.spoke ? "with " + call.spoke : ""].filter(Boolean).join(" · ");
   }
 
   /* ---------- toast with undo ---------- */
@@ -154,7 +160,7 @@
       if (c.ts.slice(0, 10) !== day) { day = c.ts.slice(0, 10); body.appendChild(h("h2", null, fmtDay(day))); }
       const cats = (c.cats || []).map(k => CAT[k].label + (((c.subs || {})[k] || []).length ? ` (${c.subs[k].join(", ")})` : "")).join("; ");
       body.appendChild(h("div", { class: "pl-print-row" },
-        h("p", null, h("strong", null, c.student), ` — ${fmtTime(c.ts)} · ${c.result}${c.spoke ? " · with " + c.spoke : ""}`),
+        h("p", null, h("strong", null, c.student), ` — ${fmtTime(c.ts)}${c.method ? " · " + c.method : ""} · ${c.result}${c.spoke ? " · with " + c.spoke : ""}`),
         cats ? h("p", null, cats) : null,
         c.note ? h("p", { class: "note" }, c.note) : null,
         c.followUp ? h("p", null, c.followUp.done ? "Follow-up: done" : "Follow-up: " + (c.followUp.due ? "due " + fmtShort(c.followUp.due) : "no date")) : null));
@@ -170,6 +176,7 @@
     const st = {
       student: opts.student || base.student || "",
       result: base.result || RESULTS_()[0],
+      method: base.method != null ? base.method : (METHODS_()[0] || ""),
       cats: new Set(base.cats || (opts.from ? opts.from.cats : [])),
       subs: JSON.parse(JSON.stringify(base.subs || (opts.from ? opts.from.subs : {}) || {})),
       spoke: base.spoke || "",
@@ -201,6 +208,7 @@
           h("option", { value: "" }, "Choose a student…"), students().map(n => h("option", { value: n, selected: n === st.student ? true : null }, n)));
         form.appendChild(sel);
       }
+      if (METHODS_().length) { form.appendChild(h("p", { class: "pl-label" }, "How did you reach them?")); form.appendChild(seg(METHODS_(), () => st.method, v => st.method = v, true)); }
       form.appendChild(h("p", { class: "pl-label" }, "Result"));
       form.appendChild(seg(RESULTS_(), () => st.result, v => st.result = v || RESULTS_()[0]));
 
@@ -254,7 +262,7 @@
         if (!st.student) { msg.textContent = "Choose a student."; return; }
         const done = snapshotUndo(`Saved call with ${st.student}.`);
         const call = {
-          id: uid(), student: st.student, ts: st.ts, result: st.result,
+          id: uid(), student: st.student, ts: st.ts, method: st.method || "", result: st.result,
           cats: CATS().map(c => c.key).filter(k => st.cats.has(k)),
           subs: Object.fromEntries(Object.entries(st.subs).filter(([k, v]) => st.cats.has(k) && v.length)),
           spoke: st.spoke, note: st.note.trim(),
@@ -392,7 +400,7 @@
         h("div", { class: "pl-fu-stripe", style: { background: stripe(c) } }),
         h("div", { class: "pl-fu-main" },
           h("div", { class: "pl-fu-top" }, h("strong", null, c.student),
-            h("span", { class: "pl-fu-when" }, [fmtTime(c.ts), c.result, c.spoke && "with " + c.spoke].filter(Boolean).join(" · "))),
+            h("span", { class: "pl-fu-when" }, [fmtTime(c.ts), c.method, c.result, c.spoke && "with " + c.spoke].filter(Boolean).join(" · "))),
           tags(c),
           c.note ? h("p", { class: "pl-fu-note" }, c.note) : null,
           fu ? h("p", { class: "pl-fu-flag" + (fu.done ? " done" : "") }, fu.done ? "✓ Followed up" : "Follow-up " + (fu.due ? "due " + fmtShort(fu.due) : "— no date set")) : null),
@@ -410,9 +418,9 @@
   function csvCell(v) { v = String(v == null ? "" : v); return /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v; }
   function downloadCSV() {
     const used = S.settings.cats.filter(c => !c.removed || S.calls.some(x => (x.cats || []).includes(c.key)));
-    const rows = [["Date", "Time", "Student", "Result", "Spoke with", ...used.map(c => c.label), "All subcategories", "Note", "Follow-up needed", "Follow-up due", "Follow-up done"]];
+    const rows = [["Date", "Time", "Student", "How", "Result", "Spoke with", ...used.map(c => c.label), "All subcategories", "Note", "Follow-up needed", "Follow-up due", "Follow-up done"]];
     filteredHistory().slice().reverse().forEach(c => rows.push([
-      c.ts.slice(0, 10), fmtTime(c.ts), c.student, c.result, c.spoke || "",
+      c.ts.slice(0, 10), fmtTime(c.ts), c.student, c.method || "", c.result, c.spoke || "",
       ...used.map(k => (c.cats || []).includes(k.key) ? ((c.subs || {})[k.key] || []).join("; ") || "Yes" : ""),
       used.flatMap(k => ((c.subs || {})[k.key] || []).map(s => `${k.label}: ${s}`)).join("; "),
       c.note || "", c.followUp ? "Yes" : "", c.followUp && c.followUp.due || "", c.followUp && c.followUp.done ? "Yes" : ""]));
@@ -505,6 +513,9 @@
       const n = catsBox.querySelectorAll(".pl-set-name"); n[n.length - 1].select();
     } }, "+ Add category");
 
+    if (!Array.isArray(d.methods)) d.methods = DEFAULTS().methods;
+    const methods = h("textarea", { class: "pl-set-subs", rows: "5", oninput: e => { d.methods = lines(e.target.value); dirty(); } });
+    methods.value = d.methods.join("\n");
     const results = h("textarea", { class: "pl-set-subs", rows: "5", oninput: e => { d.results = lines(e.target.value); dirty(); } });
     results.value = d.results.join("\n");
     const who = h("textarea", { class: "pl-set-subs", rows: "4", oninput: e => { d.who = lines(e.target.value); dirty(); } });
@@ -541,6 +552,9 @@
       h("div", { class: "card" }, h("h3", null, "Categories"),
         h("p", { class: "help" }, "What a call can be about. Change the name and color, and list the subcategories (put your subjects under Academics). Removing a category hides it for new calls; past calls keep it."),
         catsBox, h("div", { class: "actions" }, addCat)),
+      h("div", { class: "pl-set-two" },
+        h("div", { class: "card" }, h("h3", null, "\"How\" choices"), h("p", { class: "help" }, "How you reached the family: phone call, email, text… One per line. The first one is selected by default. Leave empty to hide this question."), methods),
+        h("div", { class: "card" }, h("h3", null, "Tip"), h("p", { class: "help", style: "margin:0" }, "Use “How” for the way you reached them (Phone call, Email…) and “Result” for what happened (Spoke, Left message, Got a reply…). Both show in the History, printouts and the Excel download."))),
       h("div", { class: "pl-set-two" },
         h("div", { class: "card" }, h("h3", null, "Result buttons"), h("p", { class: "help" }, "One per line. The first one is selected by default."), results),
         h("div", { class: "card" }, h("h3", null, "\"Spoke with\" choices"), h("p", { class: "help" }, "One per line. Leave empty to hide this question."), who)),
@@ -602,7 +616,7 @@
       dueList: names.map(n => { const l = lastContact(n); return { name: n, days: l ? dayDiff(l.ts, today) : null }; })
         .filter(x => x.days == null || x.days > DUE()).sort((a, b) => (b.days == null ? 1e9 : b.days) - (a.days == null ? 1e9 : a.days)),
       followList: fus.map(c => ({ name: c.student, due: c.followUp.due || "", overdue: !!(c.followUp.due && c.followUp.due < today), today: c.followUp.due === today })),
-      recent: S.calls.slice().sort((a, b) => a.ts < b.ts ? 1 : -1).slice(0, 6).map(c => ({ name: c.student, ts: c.ts, result: c.result || "" }))
+      recent: S.calls.slice().sort((a, b) => a.ts < b.ts ? 1 : -1).slice(0, 6).map(c => ({ name: c.student, ts: c.ts, result: [c.method, c.result].filter(Boolean).join(" · ") }))
     };
   }
   window.PhoneLog = { open, summary };
