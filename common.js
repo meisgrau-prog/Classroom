@@ -13,6 +13,8 @@ function applyHomeText(t) {
 function applyNames(name, welcome) {
   document.querySelectorAll("[data-teacher]").forEach(el => { el.textContent = name; });
   document.querySelectorAll("[data-welcome]").forEach(el => { el.textContent = welcome; });
+  const mono = document.getElementById("ts-mono");
+  if (mono && name) mono.textContent = name.split(/\s+/).filter(Boolean).slice(-2).map(w => w[0]).join("").toUpperCase();
   document.title = document.title.replace(/Rabbi Eisgrau|\u2013 .*$/, m => m.startsWith("\u2013") ? "\u2013 " + name : name);
 }
 // Pages stay hidden until we know whether the site is locked (see showSiteGate).
@@ -381,6 +383,11 @@ function normalizeContent(c) {
   c.settings.parentAccounts = Object.assign({ on: false, apiKey: "", projectId: "", requireCode: true }, c.settings.parentAccounts);
   if (!c.settings.teacherName) c.settings.teacherName = SITE.teacherName;
   if (!c.settings.welcome) c.settings.welcome = SITE.welcome;
+  // Contact details (Settings page in the Teacher Area); fall back to data.js.
+  ["phone", "contactEmail", "formEmail"].forEach(k => {
+    if (typeof c.settings[k] !== "string") c.settings[k] = SITE[k] || "";
+    if (c.settings[k] || k === "formEmail") SITE[k] = c.settings[k];
+  });
   if (!Array.isArray(c.banners)) {
     const nh = c.noHomework || {};
     c.banners = [{ on: !!nh.on, message: nh.message || "No homework tonight!", emojiStart: "🎉", emojiEnd: "🥳", color: "yellow", pages: ["home", "homework"] }];

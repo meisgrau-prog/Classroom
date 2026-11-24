@@ -671,7 +671,7 @@
     return { name: t, qty: 1 };
   }
   function prizesView() {
-    let P = { prizes: [], given: [], boxes: [], opened: -1, peek: false, sound: true };
+    let P = { prizes: [], given: [], boxes: [], opened: -1, peek: false, sound: true, count: 4, showEmpty: true };
     try { const s = JSON.parse(localStorage.getItem(PRIZE_STORE) || "null"); if (s && Array.isArray(s.prizes)) P = Object.assign(P, s); } catch {}
     const saveP = () => { try { localStorage.setItem(PRIZE_STORE, JSON.stringify(P)); } catch {} };
     const left = () => P.prizes.reduce((n, p) => n + p.qty, 0);
@@ -767,13 +767,23 @@
     const stage = h("div", { class: "cr-stage pz-stage" }, canvas, boxesEl, stageMsg);
     const soundChk = h("input", { type: "checkbox" }); soundChk.checked = P.sound !== false;
     soundChk.addEventListener("change", () => { P.sound = soundChk.checked; saveP(); });
+    const countSel = h("select", { class: "pz-count", "aria-label": "Number of boxes" },
+      Array.from({ length: 12 }, (_, k) => h("option", { value: String(k + 1) }, String(k + 1))));
+    countSel.value = String(boxCount());
+    countSel.addEventListener("change", () => { P.count = +countSel.value; saveP(); if (left() || P.showEmpty !== false) newRound(); else drawBoxes(); });
+    const emptyChk = h("input", { type: "checkbox" }); emptyChk.checked = P.showEmpty !== false;
+    emptyChk.addEventListener("change", () => { P.showEmpty = emptyChk.checked; saveP(); if (P.opened < 0 && P.boxes.length) newRound(); });
     function newRound() {
       const units = [];
       P.prizes.forEach(p => { for (let k = 0; k < p.qty; k++) units.push(p.name); });
-      P.boxes = shuffle(units).slice(0, 4);
+      const n = boxCount();
+      const picks = shuffle(units).slice(0, n);
+      // Not enough prizes left? Fill the rest with empty boxes (if turned on), in random spots.
+      P.boxes = P.showEmpty !== false ? shuffle(picks.concat(Array(n - picks.length).fill(null))) : picks;
       P.opened = -1; P.peek = false;
       saveP(); drawBoxes();
     }
+    function boxCount() { return Math.min(12, Math.max(1, parseInt(P.count, 10) || 4)); }
     function fillIfEmpty() { if (!P.boxes.length || (P.opened >= 0 && false)) newRound(); }
     function drawBoxes() {
       boxesEl.innerHTML = "";
@@ -782,22 +792,27 @@
         stageMsg.textContent = left() ? "Press “New round” to fill the boxes." : "Add prizes to fill the boxes.";
         return;
       }
-      stageMsg.textContent = P.opened >= 0 ? "" : "Pick a box!";
+      const n = P.boxes.length, cols = n <= 5 ? n : Math.ceil(n / 2);
+      boxesEl.style.setProperty("--pz-cols", cols);
+      boxesEl.classList.toggle("many", cols > 4);
+      const real = P.boxes.filter(Boolean).length;
+      stageMsg.textContent = P.opened >= 0 ? "" : real ? "Pick a box!" : "No prizes left — add more above.";
       P.boxes.forEach((name, i) => {
         const isOpen = P.opened === i, show = isOpen || (P.opened >= 0 && P.peek);
         const box = h("button", { type: "button", class: "pz-box" + (isOpen ? " open" : "") + (P.opened >= 0 && !isOpen ? " other" : "") + (show && !isOpen ? " peek" : ""),
-          "aria-label": show ? `Box ${i + 1}: ${name}` : `Open box ${i + 1}`, disabled: P.opened >= 0 ? true : null,
+          "aria-label": show ? `Box ${i + 1}: ${name || "empty"}` : `Open box ${i + 1}`, disabled: P.opened >= 0 ? true : null,
           onclick: () => openBox(i) },
           h("span", { class: "pz-lid" }, h("span", { class: "pz-bow" })),
           h("span", { class: "pz-body" }, h("span", { class: "pz-num" }, String(i + 1))),
-          h("span", { class: "pz-prize" }, h("small", null, isOpen ? "You won" : "Box " + (i + 1)), h("strong", null, show ? name : "")));
+          h("span", { class: "pz-prize" + (name ? "" : " empty") }, h("small", null, isOpen ? (name ? "You won" : "Sorry") : "Box " + (i + 1)), h("strong", null, show ? (name || "Empty") : "")));
         boxesEl.appendChild(box);
       });
     }
     function openBox(i) {
-      if (P.opened >= 0 || !P.boxes[i]) return;
+      if (P.opened >= 0 || i >= P.boxes.length) return;
       const name = P.boxes[i];
       P.opened = i;
+      if (!name) { saveP(); drawBoxes(); stageMsg.textContent = "Empty box — better luck next time!"; return; }
       const p = P.prizes.find(x => x.name === name);
       if (p) { p.qty -= 1; if (p.qty < 1) P.prizes.splice(P.prizes.indexOf(p), 1); }
       P.given.push({ name, box: i + 1 });
@@ -812,7 +827,7 @@
       if (!P.given.length) { givenList.appendChild(h("li", { class: "help", style: "list-style:none" }, "No prizes given out yet.")); return; }
       P.given.forEach(g => givenList.appendChild(h("li", null, h("strong", null, g.name), h("span", null, ` — box ${g.box}`))));
     }
-    const nextRound = () => { if (!left()) { stageMsg.textContent = "No prizes left. Add more prizes above."; P.boxes = []; P.opened = -1; saveP(); drawBoxes(); return; } newRound(); };
+    const nextRound = () => { if (!left() && P.showEmpty === false) { stageMsg.textContent = "No prizes left. Add more prizes above."; P.boxes = []; P.opened = -1; saveP(); drawBoxes(); return; } newRound(); };
     const peekBtn = () => { if (P.opened < 0) return; P.peek = true; saveP(); drawBoxes(); };
 
     const el = h("div", { class: "cr-view hidden" },
@@ -835,7 +850,10 @@
           h("button", { type: "button", class: "button cr-go", onclick: nextRound }, "New round"),
           h("button", { type: "button", class: "button secondary", onclick: peekBtn }, "Show the other boxes"),
           fullscreenBtn(stage, [["New round", nextRound, true], ["Show the other boxes", peekBtn]])),
-        h("div", { class: "rf-options" }, h("label", { class: "check-line", style: "margin:0" }, soundChk, " Sound"))),
+        h("div", { class: "rf-options pz-settings" },
+          h("label", { class: "check-line", style: "margin:0" }, "Number of boxes ", countSel),
+          h("label", { class: "check-line", style: "margin:0" }, emptyChk, " Show empty boxes when prizes run out"),
+          h("label", { class: "check-line", style: "margin:0" }, soundChk, " Sound"))),
       h("div", { class: "card" },
         h("div", { class: "cr-row" }, h("h2", { class: "section-title", style: "margin:0" }, "Prizes Given Out"),
           h("span", { class: "actions", style: "margin:0" },
@@ -1247,5 +1265,5 @@
     }
   };
 
-  window.Classroom = { open, _test: { parsePrizeLine, rowsToNames, detectColumns, namesFromColumns, cleanRows, parseDelimited, readXlsx, shuffle, randInt } };
+  window.Classroom = { open, readSheetRows, cleanRows, detectColumns, _test: { parsePrizeLine, rowsToNames, detectColumns, namesFromColumns, cleanRows, parseDelimited, readXlsx, shuffle, randInt } };
 })();

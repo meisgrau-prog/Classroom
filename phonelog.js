@@ -597,7 +597,12 @@
       dueCalls: names.filter(n => { const l = lastContact(n); return !l || dayDiff(l.ts, today) > DUE(); }).length,
       followDue: fus.filter(c => c.followUp.due && c.followUp.due <= today).length,
       followOpen: fus.length,
-      callsThisWeek: S.calls.filter(c => dayDiff(c.ts, today) < 7).length
+      callsThisWeek: S.calls.filter(c => dayDiff(c.ts, today) < 7).length,
+      // lists for the Teacher Area home page
+      dueList: names.map(n => { const l = lastContact(n); return { name: n, days: l ? dayDiff(l.ts, today) : null }; })
+        .filter(x => x.days == null || x.days > DUE()).sort((a, b) => (b.days == null ? 1e9 : b.days) - (a.days == null ? 1e9 : a.days)),
+      followList: fus.map(c => ({ name: c.student, due: c.followUp.due || "", overdue: !!(c.followUp.due && c.followUp.due < today), today: c.followUp.due === today })),
+      recent: S.calls.slice().sort((a, b) => a.ts < b.ts ? 1 : -1).slice(0, 6).map(c => ({ name: c.student, ts: c.ts, result: c.result || "" }))
     };
   }
   window.PhoneLog = { open, summary };

@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Contact – Rabbi Eisgrau</title>
-  <link rel="stylesheet" href="style.css?v=20261210">
-  <script src="data.js?v=20261210"></script>
-  <script src="common.js?v=20261210"></script>
+  <link rel="stylesheet" href="style.css?v=20261211">
+  <script src="data.js?v=20261211"></script>
+  <script src="common.js?v=20261211"></script>
 </head>
 <body data-page="contact">
   <header class="topbar">
@@ -60,10 +60,14 @@
   </main>
   <script>
     // Phone links
-    const digits = SITE.phone.replace(/[^0-9+]/g, "");
-    document.getElementById("call-number").textContent = SITE.phone;
-    document.getElementById("call-btn").href = "tel:" + digits;
-    document.getElementById("text-btn").href = "sms:" + digits;
+    function fillPhone() {
+      const digits = SITE.phone.replace(/[^0-9+]/g, "");
+      document.getElementById("call-number").textContent = SITE.phone;
+      document.getElementById("call-btn").href = "tel:" + digits;
+      document.getElementById("text-btn").href = "sms:" + digits;
+    }
+    fillPhone();
+    loadContent().then(fillPhone).catch(() => {});
 
     // Messages are delivered by FormSubmit (formsubmit.co), a free service
     // that emails form submissions to SITE.contactEmail.

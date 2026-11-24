@@ -410,6 +410,7 @@
       h("span", { class: "pl-bar-btns" },
         h("button", { type: "button", class: "button secondary", onclick: () => download(`Gradebook ${from} to ${to}.xlsx`, exportWorkbook(from, to)) }, "Download Excel"),
         h("button", { type: "button", class: "button secondary", onclick: () => window.print() }, "Print"))));
+    p.appendChild(h("h2", { class: "gb-print-title" }, `Gradebook — ${fmt(from, { month: "short", day: "numeric" })} to ${fmt(to, { month: "short", day: "numeric", year: "numeric" })}`));
     const shown = cats().filter(c => c.show && c.better !== "text");
     // class averages
     const stats = shown.map(c => {
@@ -455,7 +456,11 @@
         subjKeys(c).map(sk => h("tr", null, h("th", null, sk === "_" ? "" : sk), dates.map(d => h("td", { class: c.better === "text" ? "gb-text" : "" }, getV(c.id, sk, d, s) || "")))));
       box.appendChild(h("div", { class: "gb-scroll" }, t));
     });
-    box.appendChild(h("div", { class: "pl-actions" }, h("button", { type: "button", class: "button secondary", onclick: () => window.print() }, "Print")));
+    box.appendChild(h("div", { class: "pl-actions" }, h("button", { type: "button", class: "button secondary", onclick: () => {
+      document.body.classList.add("gb-print-detail");
+      window.addEventListener("afterprint", () => document.body.classList.remove("gb-print-detail"), { once: true });
+      window.print();
+    } }, "Print")));
     overlay.appendChild(box); document.body.appendChild(overlay);
   }
 
@@ -826,5 +831,30 @@
     TABS.forEach(([k]) => { panels[k] = h("div", { class: "pl-panel" }); root.appendChild(panels[k]); });
     show(students().length ? "dash" : "settings");
   }
-  window.Gradebook = { open, _t: { num, exportWorkbook, importWorkbook, weekStartOf, catDates, setV, getV, G: () => G } };
+  // points of interest for the Teacher Area home page (this week)
+  function summary() {
+    load();
+    const names = students(), t = today(), from = weekStartOf(t), to = addDays(from, 6);
+    const shown = cats().filter(c => c.show && c.better !== "text");
+    const averages = shown.map(c => {
+      const vals = names.map(s => studentAvg(c, s, from, to)).filter(v => v != null);
+      const avg = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+      return { name: c.name, color: c.color, avg: round(avg), max: c.max, low: c.better === "low", tone: tone(pct(c, avg, from, to)), n: vals.length };
+    }).filter(a => a.n);
+    const attention = [], stars = [];
+    names.forEach(s => {
+      const flags = [], ps = [];
+      shown.forEach(c => { const v = studentAvg(c, s, from, to), p = pct(c, v, from, to); if (p == null) return; ps.push(p); if (p < G.settings.attention) flags.push({ cat: c.name, color: c.color, v: round(v) }); });
+      if (flags.length) attention.push({ name: s, flags });
+      if (ps.length) stars.push({ name: s, p: ps.reduce((a, b) => a + b, 0) / ps.length });
+    });
+    stars.sort((a, b) => b.p - a.p);
+    const has = (c, a, b) => subjKeys(c).some(sk => Object.entries(((G.grades[c.id] || {})[sk]) || {}).some(([d, row]) => d >= a && d <= b && Object.keys(row).length));
+    const school = G.settings.days.includes(parse(t).getDay());
+    const missing = cats().filter(c => c.show && c.better !== "text").map(c =>
+      c.freq === "daily" ? (school && !has(c, t, t) ? { name: c.name, when: "today", color: c.color } : null)
+        : (!has(c, from, to) ? { name: c.name, when: "this week", color: c.color } : null)).filter(Boolean);
+    return { students: names.length, from, to, averages, attention, stars: stars.filter(s => s.p >= G.settings.good).slice(0, 5), missing, good: G.settings.good, attentionLine: G.settings.attention };
+  }
+  window.Gradebook = { open, summary, _t: { num, exportWorkbook, importWorkbook, weekStartOf, catDates, setV, getV, G: () => G } };
 })();

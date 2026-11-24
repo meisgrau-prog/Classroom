@@ -163,8 +163,26 @@ async function connect(t) {
   branch = repo.default_branch || "main";
   await loadFromGitHub();
 }
+// One page, two views: "Parent Portal Controls" (posting) and "Settings" (portal.html#settings).
+function portalView() {
+  const settings = location.hash === "#settings";
+  $("settings-card").classList.toggle("hidden", !settings);
+  $("posts-area").classList.toggle("hidden", settings);
+  $("home-settings").classList.toggle("hidden", !settings);
+  if (settings && window.TeacherHome && !$("home-settings").children.length) TeacherHome.settingsCard($("home-settings"));
+  $("pp-title").textContent = settings ? "Settings" : "Parent Portal Controls";
+  $("changepw-open").classList.toggle("hidden", !settings);
+  document.querySelectorAll(".ts-item[data-nav]").forEach(a => {
+    const on = a.dataset.nav === (settings ? "settings" : "posts");
+    a.classList.toggle("active", on);
+    if (on) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
+  });
+  document.title = (settings ? "Settings" : "Parent Portal Controls") + " – " + (content && content.settings ? content.settings.teacherName : SITE.teacherName);
+}
+window.addEventListener("hashchange", () => { if (!$("editor").classList.contains("hidden")) { portalView(); window.scrollTo({ top: 0 }); } });
 function openEditor() {
   showOnly(null);
+  portalView();
   $("editor").classList.remove("hidden");
   $("savebar").classList.remove("hidden");
   renderAll();
@@ -835,6 +853,11 @@ function settingsControls() {
   welcome.value = content.settings.welcome || "";
   name.oninput = () => { content.settings.teacherName = name.value; changed(); };
   welcome.oninput = () => { content.settings.welcome = welcome.value; changed(); };
+  [["set-phone", "phone"], ["set-email", "contactEmail"], ["set-formemail", "formEmail"]].forEach(([id, k]) => {
+    const inp = $(id);
+    inp.value = content.settings[k] || "";
+    inp.oninput = () => { content.settings[k] = inp.value.trim(); changed(); };
+  });
   const ht = content.settings.homeText;
   ["message", "classwork", "homework", "news", "programs", "contact"].forEach(k => {
     const el = $("hp-" + k);
