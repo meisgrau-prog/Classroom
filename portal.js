@@ -1113,13 +1113,14 @@ function teacherGate() {
     try { await connect(saved); openEditor(); return; }
     catch (e) { token = null; if (e.status === 401) forgetToken(); }
   }
-  if (location.hash === "#key") return;                    // backup sign-in with a GitHub key
+  if (location.hash === "#key") { showOnly("keysignin"); return; }   // backup sign-in with a GitHub key
   // Signed in to the Teacher Area already: open right away, no second password.
   // (If this device has no working GitHub key, the password is asked once, only when you press Save & Publish.)
   if (await teacherIsSignedIn()) { await openFromWebsite(); return; }
   // (signed in to the Teacher Area always includes the key now, so this page opened above;
   //  anyone else gets the same Teacher Area sign-in as every teacher page)
-  if (await fetchSiteLock()) teacherGate();               // otherwise the first-time setup screen stays
+  // The sign-in box starts hidden (no flash); it only appears if a sign-in is really needed.
+  if (await fetchSiteLock()) teacherGate(); else showOnly("signin");   // no password set up yet: first-time screen
 })();
 
 // Publishing needs the GitHub key; ask for the Teacher Area password only if this device doesn't have it yet.
