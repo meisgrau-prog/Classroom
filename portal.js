@@ -927,7 +927,8 @@ function homePageControls() {
   const H = content.settings.home;
   const upd = () => { changed(); clearTimeout(previewTimer); previewTimer = setTimeout(() => homePreview(), 120); };
   const text = (id, key) => { const el = $(id); el.value = H[key] || ""; el.oninput = () => { H[key] = el.value.trim() ? el.value : ""; upd(); }; };
-  text("sh-blurb", "blurb"); text("sh-footer", "footer");
+  text("sh-footer", "footer");
+  $("sh-blurb").value = H.blurb || ""; $("sh-blurb").oninput = () => { H.blurb = $("sh-blurb").value.trim() ? $("sh-blurb").value : ""; upd(); };
   $("sh-card").value = H.cardTitle && H.cardTitle !== "Sign in" ? H.cardTitle : ""; $("sh-card").oninput = () => { H.cardTitle = $("sh-card").value.trim() || "Sign in"; upd(); };
   [["sh-name", "showName"], ["sh-grade", "showGrade"], ["sh-nav", "showNav"], ["sh-motion", "motion"]].forEach(([id, k]) => { const el = $(id); el.checked = H[k] !== false; el.onchange = () => { H[k] = el.checked; upd(); }; });
   const seg = (id, key, after) => { const box = $(id); const sync = () => box.querySelectorAll("[data-v]").forEach(b => b.setAttribute("aria-pressed", b.dataset.v === H[key] ? "true" : "false")); box.querySelectorAll("[data-v]").forEach(b => b.onclick = () => { H[key] = b.dataset.v; sync(); after && after(); upd(); }); sync(); };
@@ -960,7 +961,7 @@ function homePageControls() {
   else if (H.photo) pmsg.textContent = "Using your uploaded photo.";
   $("sh-reset").onclick = () => {
     if (!confirm("Put the home page back to the original look? (Your name and heading stay.)")) return;
-    const keep = H.photo; Object.assign(H, { blurb: "", cardTitle: "Sign in", footer: "", showName: true, showGrade: true, showNav: true, bg: "drawing", motion: true, color: "#14213d", dim: 1, layout: "right", accent: "navy" }); H.photo = keep;
+    const keep = H.photo; Object.assign(H, { blurb: "Classwork, homework, news and programs for our class families — all in one place. Please sign in to continue.", cardTitle: "Sign in", footer: "", showName: true, showGrade: true, showNav: true, bg: "drawing", motion: true, color: "#14213d", dim: 1, layout: "right", accent: "navy" }); H.photo = keep;
     homePageControls(); upd();
   };
   homePreview();
@@ -1013,6 +1014,7 @@ $("save-btn").addEventListener("click", async () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
     return;
   }
+  if (!token && !(await askPasswordForKey())) return;
   btn.disabled = true;
   msg.className = "msg";
   try {
@@ -1069,19 +1071,62 @@ $("save-btn").addEventListener("click", async () => {
   }
 });
 
-/* ---------------- start ---------------- */
+/* ---------------- start ----------------
+   No separate lock: if you're signed in to the Teacher Area this page just opens.
+   If not, it shows the same Teacher Area sign-in as every other teacher page. */
+async function teacherIsSignedIn() {
+  const lk = await fetchSiteLock(); if (!lk || !lk.salt) return false;
+  try { return (localStorage.getItem("classroom_teacher_unlocked") || sessionStorage.getItem("classroom_teacher_unlocked")) === lk.salt; } catch { return false; }
+}
+async function openFromWebsite() {          // signed in to the Teacher Area, but this device has no GitHub key yet
+  try { content = normalize(await loadContent()); } catch { content = normalize({}); }
+  openEditor();
+}
+function teacherGate() {
+  showOnly(null);
+  let key = null;
+  const foot = document.createElement("p"); foot.className = "gate-foot";
+  const a = document.createElement("a"); a.href = "index.html"; a.textContent = "← Back to sign in"; foot.appendChild(a);
+  showGate({
+    title: "Teacher Area", sub: "Enter your Teacher Area password.",
+    check: async pw => { const t = await unlockWithPassword(pw); if (!t) return null; key = t; const lk = await fetchSiteLock(); return (lk && lk.salt) || "1"; },
+    storeKey: "classroom_teacher_unlocked",
+    after: remember => saveToken(key, remember),
+    footer: foot,
+    reveal: async () => { try { await connect(key); openEditor(); } catch (e) { showOnly("signin"); $("signin-msg").textContent = "Couldn't connect to GitHub: " + e.message; } }
+  });
+}
 (async () => {
   const saved = readToken();
-  if (!saved) return;
-  try {
-    await connect(saved);
-    openEditor();
-  } catch (e) {
-    token = null;
-    if (e.status === 401) forgetToken();
-    $("signin-msg").textContent = e.status === 401 ? "Your saved key has expired. Please sign in with a new key." : "Couldn't connect to GitHub: " + e.message;
+  if (saved) {
+    try { await connect(saved); openEditor(); return; }
+    catch (e) { token = null; if (e.status === 401) forgetToken(); }
   }
+  if (location.hash === "#key") return;                    // backup sign-in with a GitHub key
+  // (signed in to the Teacher Area always includes the key now, so this page opened above;
+  //  anyone else gets the same Teacher Area sign-in as every teacher page)
+  if (await fetchSiteLock()) teacherGate();               // otherwise the first-time setup screen stays
 })();
+
+// Publishing needs the GitHub key; ask for the Teacher Area password only if this device doesn't have it yet.
+function askPasswordForKey() {
+  return new Promise(resolve => {
+    const overlay = document.createElement("div"); overlay.className = "pl-overlay";
+    overlay.innerHTML = '<form class="pl-form" style="max-width:440px"><div class="pl-form-head"><div><small>One more step</small><h2>Confirm your password</h2></div></div><p>To publish changes to the website, type your Teacher Area password once on this device.</p><input type="password" autocomplete="current-password" placeholder="Password" aria-label="Password"><label class="check-line"><input type="checkbox"> Keep me signed in on this device</label><p class="status err"></p><div class="pl-actions"><button type="button" class="button secondary">Cancel</button><button type="submit" class="button">Continue</button></div></form>';
+    document.body.appendChild(overlay);
+    const f = overlay.querySelector("form"), pw = f.querySelector("input[type=password]"), rem = f.querySelector("input[type=checkbox]"), msg = f.querySelector(".status");
+    addPasswordToggles(overlay); pw.focus();
+    f.querySelector(".button.secondary").onclick = () => { overlay.remove(); resolve(null); };
+    f.onsubmit = async e => {
+      e.preventDefault(); msg.textContent = "Checking…";
+      const t = await unlockWithPassword(pw.value).catch(() => null);
+      if (!t) { msg.textContent = "That password isn't right."; pw.select(); return; }
+      try { token = t.trim(); const repo = await gh(`/repos/${OWNER}/${REPO}`); branch = repo.default_branch || "main"; }
+      catch (er) { msg.textContent = "Couldn't connect to GitHub: " + er.message; return; }
+      saveToken(token, rem.checked); overlay.remove(); resolve(token);
+    };
+  });
+}
 
 addPasswordToggles(document);
 

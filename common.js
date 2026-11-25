@@ -482,7 +482,10 @@ async function checkTeacherLock() {
   if (!lock || !lock.salt) return reveal();            // no Teacher Portal password set up yet
   let saved = null;
   try { saved = localStorage.getItem(TEACHER_UNLOCK_KEY) || sessionStorage.getItem(TEACHER_UNLOCK_KEY); } catch {}
-  if (saved && saved === lock.salt) return reveal();
+  // one password for the whole teacher side: a sign-in also holds the key Settings and publishing need,
+  // so an older sign-in without it is asked once more, and then never again
+  let hasKey = false; try { hasKey = !!(localStorage.getItem(PORTAL_SESSION_KEY) || sessionStorage.getItem(PORTAL_SESSION_KEY)); } catch {}
+  if (saved && saved === lock.salt && hasKey) return reveal();
   let unlockedKey = null;
   const footer = el("p", "gate-foot");
   const a = el("a", null, "← Back to sign in");
@@ -543,7 +546,7 @@ function normalizeContent(c) {
   // Contact details (Settings page in the Teacher Area); fall back to data.js.
   if (typeof c.settings.grade !== "string") c.settings.grade = SITE.grade || "";
   // the website's home (sign-in) page — Settings → Website Home Page
-  c.settings.home = Object.assign({ blurb: "", cardTitle: "Sign in", footer: "", showName: true, showGrade: true, showNav: true,
+  c.settings.home = Object.assign({ blurb: "Classwork, homework, news and programs for our class families — all in one place. Please sign in to continue.", cardTitle: "Sign in", footer: "", showName: true, showGrade: true, showNav: true,
     bg: "drawing", motion: true, photo: "", color: "#14213d", dim: 1, layout: "right", accent: "navy" }, c.settings.home);
   ["phone", "contactEmail", "formEmail"].forEach(k => {
     if (typeof c.settings[k] !== "string") c.settings[k] = SITE[k] || "";

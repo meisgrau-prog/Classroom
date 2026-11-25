@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Sign In – Rabbi Eisgrau</title>
-  <link rel="stylesheet" href="style.css?v=20261236">
-  <script src="data.js?v=20261236"></script>
-  <script src="common.js?v=20261236"></script>
+  <link rel="stylesheet" href="style.css?v=20261238">
+  <script src="data.js?v=20261238"></script>
+  <script src="common.js?v=20261238"></script>
   <script>document.documentElement.classList.add("hp-wait"); setTimeout(() => document.documentElement.classList.remove("hp-wait"), 4000);</script>
 </head>
 <body class="landing-body" data-page="signin">
@@ -110,7 +110,8 @@
       if (PREVIEW) { try { const pv = JSON.parse(localStorage.getItem("site_home_preview") || "null"); if (pv) { H = pv.home || H; photoData = pv.photoData || "";
         applyNames(pv.teacherName || SITE.teacherName, pv.welcome || SITE.welcome); applyGrade(pv.grade); } } catch {} }
       const q = s => document.querySelector(s);
-      q(".hp-blurb").textContent = H.blurb || DEF_BLURB;
+      const blurb = H.blurb == null ? DEF_BLURB : H.blurb;          // left empty in Settings = no message
+      q(".hp-blurb").textContent = blurb; q(".hp-blurb").classList.toggle("hidden", !blurb.trim());
       q(".hp-card h2").textContent = H.cardTitle || "Sign in";
       q(".hp-hero .teacher").classList.toggle("hidden", H.showName === false);
       if (H.showGrade === false) q(".hp-hero .grade-line").hidden = true;
