@@ -1521,6 +1521,11 @@ html:has(body.tshell) { height: auto; }
 .ts-main { min-height: 100vh; min-width: 0; padding: clamp(18px, 3vw, 36px) clamp(16px, 3.5vw, 44px) 60px; }
 .ts-main > main, .ts-main > section { max-width: 1100px; }
 .tshell .ts-main #classroom, .tshell .ts-main #phonelog { max-width: 1100px; }
+/* Side menu always fills the full height of the window, top to bottom, however far you scroll (all browsers) */
+@media screen and (min-width: 861px) {
+  .ts-side { position: fixed; top: 0; bottom: 0; left: 0; width: 260px; height: auto; max-height: none; z-index: 25; }
+  body.tshell > .ts-main { grid-column: 2; }
+}
 /* dashboard */
 .ts-hero h1 { font-family: var(--serif); font-weight: 600; font-size: clamp(2rem, 4vw, 2.8rem); color: var(--navy); margin: 0; }
 .ts-date { margin: 0 0 4px; color: var(--gold); font-size: .85rem; letter-spacing: 2px; text-transform: uppercase; font-weight: 600; }

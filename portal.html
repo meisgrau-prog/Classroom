@@ -211,8 +211,7 @@
         <button class="tab" role="tab" data-tab="news" aria-selected="false">News</button>
         <button class="tab" role="tab" data-tab="programs" aria-selected="false">Programs</button>
         <button class="tab" role="tab" data-tab="banners" aria-selected="false">Banners</button>
-        <button class="tab" role="tab" data-tab="access" aria-selected="false">Access &amp; Wording</button>
-        <button class="tab" role="tab" data-tab="parents" aria-selected="false">Parents</button>
+        <button class="tab" role="tab" data-tab="access" aria-selected="false">Parents &amp; Access</button>
       </div>
 
       <div id="panel-classwork" class="panel"></div>
@@ -226,10 +225,9 @@
         </div>
         <div id="banners-editor"></div>
       </div>
-      <div id="panel-parents" class="panel hidden"></div>
       <div id="panel-access" class="panel hidden">
       <div class="card" id="pp-settings-card">
-        <h2 class="section-title">Access &amp; Wording</h2>
+        <h2 class="section-title">Parents &amp; Access</h2>
         <p class="help" style="margin:0 0 6px">Who can open the Parent Portal, and the words on its home page.</p>
         <details class="hp-words" open>
           <summary>Parent Portal home page wording</summary>
@@ -317,10 +315,12 @@
               <li>Paste both above, click <b>Test connection</b> (it should say “✓ Connected”), set a <b>Class password</b> for the class code, and click <b>Save &amp; Publish</b>.</li>
               <li>Optional: Security → Authentication → <b>Templates → Password reset</b> → change the sender name to your name so families recognize the email.</li>
             </ol>
-            <p class="help">Give families the Parent Portal address and the class code. To remove a parent, open the <b>Parents</b> tab, where you can see, edit, block or delete parent profiles.</p>
+            <p class="help">Give families the Parent Portal address and the class code. To remove a parent, see the <b>parent list</b> at the bottom of this tab, where you can see, edit, block or delete parent profiles.</p>
           </details>
         </div>
       </div>
+      <!-- Parent list (shown here when "Parent profiles" is chosen) -->
+      <div id="panel-parents" class="hidden" style="margin-top:18px"></div>
       </div>
       </div>
     </section>

@@ -233,7 +233,7 @@
     const SEC_KEY = "teacher_sections_v1";
     const secRead = () => { try { return JSON.parse(localStorage.getItem(SEC_KEY) || "{}") || {}; } catch { return {}; } };
     const secRows = h("div", { class: "sec-set" });
-    [["classroom", "Classroom Tools", "Students, groups, random picks, raffle, prize boxes"], ["tools", "Teacher Tools", "Phone log, gradebook, student info, support, PDF tools, timer"], ["portal", "Parent Portal Settings", "Classwork, homework, news, programs, banners, access, parents"]].forEach(([id, label, sub]) => {
+    [["classroom", "Classroom Tools", "Students, groups, random picks, raffle, prize boxes"], ["tools", "Teacher Tools", "Phone log, gradebook, student info, support, PDF tools, timer"], ["portal", "Parent Portal Settings", "Classwork, homework, news, programs, banners, parents & access"]].forEach(([id, label, sub]) => {
       const cur = secRead()[id] || "bar";
       const seg = h("div", { class: "pl-seg" });
       [["bar", "Tool bar"], ["buttons", "Buttons"], ["list", "List"]].forEach(([v, l]) => seg.appendChild(h("button", { type: "button", class: "pl-seg-btn", "aria-pressed": cur === v ? "true" : "false", "data-sec": id, "data-val": v, onclick: e => {
