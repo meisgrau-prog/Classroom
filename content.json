@@ -115,7 +115,22 @@
     "grade": "7th Grade",
     "phone": "848-210-6960",
     "contactEmail": "meisgrau@ykwaterbury.org",
-    "formEmail": ""
+    "formEmail": "",
+    "home": {
+      "blurb": "",
+      "cardTitle": "Sign in",
+      "footer": "",
+      "showName": true,
+      "showGrade": true,
+      "showNav": true,
+      "bg": "drawing",
+      "motion": true,
+      "photo": "",
+      "color": "#14213d",
+      "dim": 1,
+      "layout": "right",
+      "accent": "navy"
+    }
   },
   "programs": [
     {
