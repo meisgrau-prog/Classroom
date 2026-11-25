@@ -280,6 +280,8 @@
   }
 
   /* ---------- views ---------- */
+  const listView = { q: "", sort: "az", filter: "all" };
+  const initials = n => n.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join("").toUpperCase();
   let root, tabsEl, panels = {}, current = "log";
   const histF = { student: "", type: "", followOnly: false };
   let fuType = "";
@@ -318,7 +320,10 @@
     const dueBox = h("div", { class: "card pl-box" }, h("h3", null, "Due for a call ", h("span", { class: "pl-count" }, String(dueNames.length))),
       h("p", { class: "help" }, `No contact in ${wk(S.settings.dueWeeks)}.`));
     if (!dueNames.length) dueBox.appendChild(h("p", { class: "pl-none" }, "Everyone has been contacted recently. 👏"));
-    else dueBox.appendChild(h("div", { class: "pl-chips" }, dueNames.map(n => h("button", { type: "button", class: "pl-chip", onclick: () => openForm({ student: n }) }, n))));
+    else dueBox.appendChild(h("ul", { class: "stu-mini" }, dueNames.slice(0, 8).map(n => { const l = lastContact(n);
+      return h("li", { onclick: () => openForm({ student: n }) }, h("span", { class: "stu-av grey" }, initials(n)), h("span", { class: "stu-mini-name" }, n),
+        h("small", null, l ? ago(dayDiff(l.ts, today)) : "Never"), h("button", { type: "button", class: "small-btn", onclick: e => { e.stopPropagation(); openForm({ student: n }); } }, "Log")); }),
+      dueNames.length > 8 ? h("li", { class: "stu-mini-more", onclick: () => { listView.filter = "due"; drawLog(); } }, `+ ${dueNames.length - 8} more — show all`) : null));
     const fuBox = h("div", { class: "card pl-box" }, h("h3", null, "Follow-ups ", h("span", { class: "pl-count" }, String(fus.length))));
     if (!fus.length) fuBox.appendChild(h("p", { class: "pl-none" }, "No open follow-ups."));
     else fus.slice(0, 8).forEach(c => fuBox.appendChild(followCard(c, true)));
@@ -326,19 +331,52 @@
     top.append(dueBox, fuBox);
     p.appendChild(top);
 
-    const grid = h("div", { class: "pl-grid" });
-    names.forEach(n => {
-      const l = lastContact(n);
-      const d = l ? dayDiff(l.ts, today) : null;
+    // all students, as a list
+    const q = h("input", { type: "search", class: "si-search", placeholder: "Search students…", value: listView.q, "aria-label": "Search students" });
+    const sortSel = h("select", { class: "pl-select", "aria-label": "Sort" }, [["az", "Name A–Z"], ["longest", "Longest since contact"], ["recent", "Most recent contact"]].map(([v, l]) => h("option", { value: v, selected: listView.sort === v ? true : null }, l)));
+    const filt = h("div", { class: "pl-seg" }, [["all", "All"], ["due", "Due for a call"], ["fu", "Open follow-up"]].map(([v, l]) =>
+      h("button", { type: "button", class: "pl-seg-btn", "aria-pressed": listView.filter === v ? "true" : "false", onclick: () => { listView.filter = v; drawLog(); } }, l)));
+    const tbody = h("tbody");
+    const rows = names.map(n => {
+      const l = lastContact(n), d = l ? dayDiff(l.ts, today) : null;
       const tone = d == null || d > DUE() ? "grey" : d <= GREEN() ? "green" : "gold";
-      grid.appendChild(h("button", { type: "button", class: "pl-stu " + tone, onclick: () => openForm({ student: n }) },
-        h("span", { class: "pl-stu-name" }, n),
-        h("span", { class: "pl-stu-when" }, l ? `Called ${ago(d)}` : "No calls yet")));
+      const calls = S.calls.filter(c => c.student === n).length;
+      const fu = fus.find(c => c.student === n);
+      return { n, l, d, tone, calls, fu };
     });
-    p.appendChild(h("div", { class: "card" },
-      h("div", { class: "cr-row" }, h("h3", { style: { margin: 0 } }, "Tap a student to log a call"),
+    function fill() {
+      tbody.innerHTML = "";
+      const t = listView.q.trim().toLowerCase();
+      let list = rows.filter(r => (!t || r.n.toLowerCase().includes(t)) && (listView.filter === "due" ? r.tone === "grey" : listView.filter === "fu" ? !!r.fu : true));
+      if (listView.sort === "az") list.sort((a, b) => a.n.localeCompare(b.n));
+      if (listView.sort === "longest") list.sort((a, b) => (b.d == null ? 1e9 : b.d) - (a.d == null ? 1e9 : a.d));
+      if (listView.sort === "recent") list.sort((a, b) => (a.d == null ? 1e9 : a.d) - (b.d == null ? 1e9 : b.d));
+      list.forEach(r => {
+        const status = r.tone === "green" ? "Recent" : r.tone === "gold" ? "Due soon" : r.l ? "Due" : "Never called";
+        tbody.appendChild(h("tr", { class: "stu-row", tabindex: "0", onclick: () => openForm({ student: r.n }), onkeydown: e => { if (e.key === "Enter") openForm({ student: r.n }); } },
+          h("td", null, h("div", { class: "stu-cell" }, h("span", { class: "stu-av " + r.tone }, initials(r.n)),
+            h("div", null, h("strong", null, r.n), r.fu ? h("small", { class: "stu-fu" + (r.fu.followUp.due && r.fu.followUp.due <= today ? " due" : "") }, "Follow-up " + (r.fu.followUp.due ? (r.fu.followUp.due <= today ? "due " : "") + fmtShort(r.fu.followUp.due) : "open")) : null))),
+          h("td", null, r.l ? [h("span", null, fmtShort(r.l.ts.slice(0, 10)) + (r.l.ts.slice(0, 4) !== today.slice(0, 4) ? ", " + r.l.ts.slice(0, 4) : "")), h("small", null, ago(r.d))] : h("span", { class: "stu-none" }, "—")),
+          h("td", { class: "stu-how" }, r.l ? [h("span", null, r.l.method || r.l.result || "—"), r.l.method ? h("small", null, r.l.result) : null] : h("span", { class: "stu-none" }, "—")),
+          h("td", { class: "stu-num" }, String(r.calls)),
+          h("td", null, h("span", { class: "stu-pill " + r.tone }, status)),
+          h("td", { class: "stu-act" }, h("button", { type: "button", class: "small-btn", onclick: e => { e.stopPropagation(); openForm({ student: r.n }); } }, "Log call"))));
+      });
+      if (!list.length) tbody.appendChild(h("tr", null, h("td", { colspan: "6", class: "th-none" }, "No students match.")));
+      countEl.textContent = `${list.length} of ${rows.length}`;
+    }
+    const countEl = h("span", { class: "help" });
+    q.addEventListener("input", () => { listView.q = q.value; fill(); });
+    sortSel.addEventListener("change", () => { listView.sort = sortSel.value; fill(); });
+    p.appendChild(h("div", { class: "card stu-card" },
+      h("div", { class: "stu-head" }, h("h3", { style: { margin: 0 } }, "Students"), countEl,
         h("span", { class: "pl-legend" }, h("i", { class: "green" }), `last ${wk(S.settings.greenWeeks)}`, h("i", { class: "gold" }), `${S.settings.greenWeeks}–${S.settings.dueWeeks} weeks`, h("i", { class: "grey" }), `over ${wk(S.settings.dueWeeks)} / never`)),
-      grid));
+      h("div", { class: "stu-tools" }, q, sortSel, filt),
+      h("div", { class: "stu-scroll" }, h("table", { class: "stu-table" },
+        h("thead", null, h("tr", null, h("th", null, "Student"), h("th", null, "Last contact"), h("th", null, "How / result"), h("th", { class: "stu-num" }, "Calls"), h("th", null, "Status"), h("th", null, ""))),
+        tbody)),
+      h("p", { class: "help", style: { margin: "8px 0 0" } }, "Click a student to log a call.")));
+    fill();
   }
 
   function drawFollow() {

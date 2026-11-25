@@ -54,6 +54,7 @@
     number: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1.2" fill="currentColor"/><circle cx="16" cy="8" r="1.2" fill="currentColor"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/><circle cx="8" cy="16" r="1.2" fill="currentColor"/><circle cx="16" cy="16" r="1.2" fill="currentColor"/></svg>',
     student: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/></svg>',
     prizes: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="9" width="18" height="12" rx="1.5"/><path d="M2 6h20v3H2zM12 6v15"/><path d="M12 6c-1.5-3.5-6-3.5-5.5-1 .3 1.5 3 1 5.5 1zM12 6c1.5-3.5 6-3.5 5.5-1-.3 1.5-3 1-5.5 1z"/></svg>',
+    timer: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 9.5v4l2.5 2M10 2.5h4M12 2.5V6M18.5 6.5l1.5-1.5"/></svg>',
     raffle: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 0 2-2h14a2 2 0 0 0 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 0-2 2H5a2 2 0 0 0-2-2v-2a2 2 0 0 0 0-4z"/><path d="M15 6v12" stroke-dasharray="1.5 2"/><path d="M7.5 10.5h4M7.5 13.5h3"/></svg>',
     full: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>'
   };
@@ -223,11 +224,12 @@
       number: ["Random Number", ICON.number, numberView],
       picker: ["Random Student", ICON.student, pickerView],
       raffle: ["Raffle", ICON.raffle, raffleView],
-      prizes: ["Prize Boxes", ICON.prizes, prizesView]
+      prizes: ["Prize Boxes", ICON.prizes, prizesView],
+      timer: ["Timer", ICON.timer, timerView]
     };
-    const keys = OPTS.tools || ["students", "groups", "number", "picker", "raffle", "prizes"];
+    const keys = (OPTS.tools || ["students", "groups", "number", "picker", "raffle", "prizes", "timer"]).filter(k => k !== "timer" || window.TeacherTimer);
     const menu = h("nav", { class: "cr-menu", "aria-label": "Tools" });
-    menu.style.gridTemplateColumns = `repeat(${keys.length === 6 ? 3 : Math.min(5, Math.max(keys.length, 2))}, minmax(0, 1fr))`;
+    menu.style.gridTemplateColumns = `repeat(${keys.length === 6 ? 3 : keys.length === 7 || keys.length === 8 ? 4 : Math.min(5, Math.max(keys.length, 2))}, minmax(0, 1fr))`;
     keys.forEach(key => {
       const [label, icon] = all[key];
       menu.appendChild(h("button", { type: "button", class: "cr-tool", "data-tool": key, onclick: () => show(key) },
@@ -414,19 +416,21 @@
       }, 400);
     });
     const count = h("span", { class: "cr-count" });
-    const chips = h("div", { class: "cr-chips" });
+    const chips = h("ol", { class: "att-list" });
     function drawChips() {
       chips.innerHTML = "";
       const here = present().length;
       count.textContent = state.names.length ? `${here} here · ${state.names.length - here} absent · ${state.names.length} total` : "No students yet";
-      state.names.forEach(n => {
+      state.names.forEach((n, i) => {
         const away = state.absent.includes(n);
-        chips.appendChild(h("button", { type: "button", class: "cr-chip" + (away ? " away" : ""), "aria-pressed": away ? "true" : "false",
-          title: away ? "Absent — click to mark here" : "Here — click to mark absent",
-          onclick: () => {
-            state.absent = away ? state.absent.filter(x => x !== n) : state.absent.concat(n);
-            save(); drawChips();
-          } }, n));
+        const set = a => { state.absent = a ? state.absent.filter(x => x !== n).concat(n) : state.absent.filter(x => x !== n); save(); drawChips(); };
+        chips.appendChild(h("li", { class: "att-row" + (away ? " away" : "") },
+          h("span", { class: "att-num" }, String(i + 1)),
+          h("span", { class: "stu-av " + (away ? "grey" : "green") }, n.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join("").toUpperCase()),
+          h("span", { class: "att-name" }, n),
+          h("span", { class: "att-switch", role: "group", "aria-label": n },
+            h("button", { type: "button", "aria-pressed": away ? "false" : "true", onclick: () => set(false) }, "Here"),
+            h("button", { type: "button", class: "absent", "aria-pressed": away ? "true" : "false", onclick: () => set(true) }, "Absent"))));
       });
     }
     const el = h("div", { class: "cr-view" },
@@ -438,7 +442,7 @@
       h("div", { class: "card" },
         h("div", { class: "cr-row" },
           h("h2", { class: "section-title", style: "margin:0" }, "Who's Here Today"), count),
-        h("p", { class: "help" }, "Click a name to mark them absent. Absent students are left out of groups and picks."),
+        h("p", { class: "help" }, "Mark anyone who's out today. Absent students are left out of groups and picks."),
         chips,
         h("div", { class: "actions" },
           h("button", { type: "button", class: "button secondary", onclick: () => { state.absent = []; save(); drawChips(); } }, "Mark everyone here"),
@@ -658,6 +662,13 @@
     return { el, refresh: () => { picked = picked.filter(n => present().includes(n)); } };
   }
 
+
+  /* ---------- Timer (the same Stopwatch & Timer as Teacher Tools) ---------- */
+  function timerView() {
+    const box = h("div");
+    let opened = false;
+    return { el: h("div", { class: "cr-view hidden" }, box), refresh: () => { if (!opened && window.TeacherTimer) { TeacherTimer.open(box); opened = true; } } };
+  }
 
   /* ---------- Prize Boxes ---------- */
   const PRIZE_STORE = "teacher_prizes_v1";

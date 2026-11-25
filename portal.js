@@ -170,6 +170,8 @@ function portalView() {
   $("settings-card").classList.toggle("hidden", view !== "settings");
   $("home-settings").classList.toggle("hidden", view !== "settings");
   $("sync-settings").classList.toggle("hidden", view !== "settings");
+  $("site-home-card").classList.toggle("hidden", view !== "settings");
+  if (view === "settings") homePreview(true);
   if (view === "settings" && window.TeacherSync) TeacherSync.settingsCard($("sync-settings"));
   $("posts-area").classList.toggle("hidden", view !== "posts");
   if (view === "settings" && window.TeacherHome && !$("home-settings").children.length) TeacherHome.settingsCard($("home-settings"));
@@ -251,6 +253,8 @@ $("signin-btn").addEventListener("click", async () => {
     if (t === null) { msg.textContent = "Wrong password. Please try again."; return; }
     await connect(t);
     saveToken(token, $("remember").checked);
+    // the same password unlocks the rest of the Teacher Area too
+    try { const lk = await fetchSiteLock(); if (lk && lk.salt) ($("remember").checked ? localStorage : sessionStorage).setItem("classroom_teacher_unlocked", lk.salt); } catch {}
     $("password").value = "";
     openEditor();
   } catch (e) {
@@ -339,7 +343,7 @@ $("signout").addEventListener("click", () => {
   if (dirty && !confirm("You have unsaved changes. Sign out anyway?")) return;
   forgetToken();
   dirty = false;
-  try { [localStorage, sessionStorage].forEach(s => { s.removeItem("classroom_teacher_unlocked"); s.removeItem("classroom_site_unlocked"); }); } catch {}
+  teacherSignOut();
   location.href = "index.html";
 });
 
@@ -890,9 +894,9 @@ function settingsControls() {
   const name = $("set-name"), welcome = $("set-welcome");
   name.value = content.settings.teacherName || "";
   welcome.value = content.settings.welcome || "";
-  const live = () => { applyNames(content.settings.teacherName || SITE.teacherName, content.settings.welcome); applyGrade(content.settings.grade); portalView(); };
+  const live = () => { applyNames(content.settings.teacherName || SITE.teacherName, content.settings.welcome); applyGrade(content.settings.grade); portalView(); homePreview(); };
   name.oninput = () => { content.settings.teacherName = name.value; changed(); live(); };
-  welcome.oninput = () => { content.settings.welcome = welcome.value; changed(); };
+  welcome.oninput = () => { content.settings.welcome = welcome.value; changed(); homePreview(); };
   [["set-grade", "grade"], ["set-phone", "phone"], ["set-email", "contactEmail"], ["set-formemail", "formEmail"]].forEach(([id, k]) => {
     const inp = $(id);
     inp.value = content.settings[k] || "";
@@ -907,7 +911,63 @@ function settingsControls() {
   });
 }
 
+/* ---------- Settings → Website Home Page ---------- */
+let homePhotoBlob = null, homePhotoData = "", previewTimer = null;
+function homePreview(load) {
+  const H = content && content.settings && content.settings.home; if (!H) return;
+  try { localStorage.setItem("site_home_preview", JSON.stringify({ home: H, photoData: homePhotoData, welcome: content.settings.welcome, teacherName: content.settings.teacherName, grade: content.settings.grade, t: Date.now() })); }
+  catch { try { localStorage.setItem("site_home_preview", JSON.stringify({ home: H, welcome: content.settings.welcome, teacherName: content.settings.teacherName, grade: content.settings.grade, t: Date.now() })); } catch {} }
+  const f = $("sh-frame"); if (load && f && !f.getAttribute("src")) {
+    f.src = "index.html?preview=1";
+    const box = f.parentNode, fit = () => { f.style.transform = `scale(${box.clientWidth / 1280})`; };
+    if (window.ResizeObserver) new ResizeObserver(fit).observe(box); fit();
+  }
+}
+function homePageControls() {
+  const H = content.settings.home;
+  const upd = () => { changed(); clearTimeout(previewTimer); previewTimer = setTimeout(() => homePreview(), 120); };
+  const text = (id, key) => { const el = $(id); el.value = H[key] || ""; el.oninput = () => { H[key] = el.value.trim() ? el.value : ""; upd(); }; };
+  text("sh-blurb", "blurb"); text("sh-footer", "footer");
+  $("sh-card").value = H.cardTitle && H.cardTitle !== "Sign in" ? H.cardTitle : ""; $("sh-card").oninput = () => { H.cardTitle = $("sh-card").value.trim() || "Sign in"; upd(); };
+  [["sh-name", "showName"], ["sh-grade", "showGrade"], ["sh-nav", "showNav"], ["sh-motion", "motion"]].forEach(([id, k]) => { const el = $(id); el.checked = H[k] !== false; el.onchange = () => { H[k] = el.checked; upd(); }; });
+  const seg = (id, key, after) => { const box = $(id); const sync = () => box.querySelectorAll("[data-v]").forEach(b => b.setAttribute("aria-pressed", b.dataset.v === H[key] ? "true" : "false")); box.querySelectorAll("[data-v]").forEach(b => b.onclick = () => { H[key] = b.dataset.v; sync(); after && after(); upd(); }); sync(); };
+  const showBg = () => ["drawing", "photo", "color"].forEach(k => $("sh-bg-" + k).classList.toggle("hidden", H.bg !== k));
+  seg("sh-bg", "bg", showBg); showBg();
+  seg("sh-layout", "layout");
+  const acc = $("sh-accent"); const syncAcc = () => acc.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.v === H.accent ? "true" : "false"));
+  acc.querySelectorAll("button").forEach(b => b.onclick = () => { H.accent = b.dataset.v; syncAcc(); upd(); }); syncAcc();
+  $("sh-color").value = H.color || "#14213d"; $("sh-color").oninput = () => { H.color = $("sh-color").value; upd(); };
+  $("sh-dim").value = H.dim == null ? 1 : H.dim; $("sh-dim").oninput = () => { H.dim = +$("sh-dim").value; upd(); };
+  const pmsg = $("sh-photo-msg");
+  $("sh-photo-btn").onclick = () => $("sh-photo").click();
+  $("sh-photo-remove").classList.toggle("hidden", !(H.photo || homePhotoData));
+  $("sh-photo-remove").onclick = () => { H.photo = ""; homePhotoBlob = null; homePhotoData = ""; H.bg = "drawing"; homePageControls(); upd(); };
+  $("sh-photo").onchange = async () => {
+    const file = $("sh-photo").files[0]; $("sh-photo").value = ""; if (!file) return;
+    pmsg.textContent = "Getting the photo ready…";
+    try {
+      const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = URL.createObjectURL(file); });
+      const s = Math.min(1, 1920 / Math.max(img.naturalWidth, img.naturalHeight)), cv = document.createElement("canvas");
+      cv.width = Math.round(img.naturalWidth * s); cv.height = Math.round(img.naturalHeight * s);
+      cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
+      homePhotoData = cv.toDataURL("image/jpeg", 0.82);
+      homePhotoBlob = await new Promise(r => cv.toBlob(r, "image/jpeg", 0.82));
+      H.bg = "photo"; homePageControls(); upd();
+      pmsg.textContent = `✓ Photo ready (${Math.round(homePhotoBlob.size / 1024)} KB). Click Save & Publish to put it on the website.`;
+    } catch { pmsg.textContent = "That file couldn't be opened as a picture. Try a JPG or PNG."; }
+  };
+  if (homePhotoBlob) pmsg.textContent = "✓ New photo ready — click Save & Publish to put it on the website.";
+  else if (H.photo) pmsg.textContent = "Using your uploaded photo.";
+  $("sh-reset").onclick = () => {
+    if (!confirm("Put the home page back to the original look? (Your name and heading stay.)")) return;
+    const keep = H.photo; Object.assign(H, { blurb: "", cardTitle: "Sign in", footer: "", showName: true, showGrade: true, showNav: true, bg: "drawing", motion: true, color: "#14213d", dim: 1, layout: "right", accent: "navy" }); H.photo = keep;
+    homePageControls(); upd();
+  };
+  homePreview();
+}
+
 function renderAll() {
+  homePageControls();
   settingsControls();
   lockControls();
   parentAccountControls();
@@ -972,6 +1032,14 @@ $("save-btn").addEventListener("click", async () => {
       pendingFiles.delete(f.pendingId);
       delete f.pendingId;
       f.path = path;
+    }
+
+    // 1b. New home page photo
+    if (homePhotoBlob) {
+      msg.textContent = "Uploading the home page photo…";
+      const path = `uploads/home-photo-${new Date().toISOString().replace(/[-:T]/g, "").slice(0, 14)}.jpg`;
+      await gh(contentsPath(path), { method: "PUT", body: JSON.stringify({ message: "Home page photo", content: await fileToBase64(homePhotoBlob), branch }) });
+      content.settings.home.photo = path; homePhotoBlob = null;
     }
 
     // 2. Save content.json

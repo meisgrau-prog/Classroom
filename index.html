@@ -4,9 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Sign In – Rabbi Eisgrau</title>
-  <link rel="stylesheet" href="style.css?v=20261232">
-  <script src="data.js?v=20261232"></script>
-  <script src="common.js?v=20261232"></script>
+  <link rel="stylesheet" href="style.css?v=20261236">
+  <script src="data.js?v=20261236"></script>
+  <script src="common.js?v=20261236"></script>
+  <script>document.documentElement.classList.add("hp-wait"); setTimeout(() => document.documentElement.classList.remove("hp-wait"), 4000);</script>
 </head>
 <body class="landing-body" data-page="signin">
   <div class="home signin">
@@ -100,6 +101,35 @@
     <footer class="hp-foot">© <span data-teacher>Rabbi Eisgrau</span></footer>
   </div>
   <script>
+    // Settings → Website Home Page (with a live preview inside the Teacher Area)
+    const PREVIEW = /[?&]preview=1/.test(location.search);
+    const ACCENTS = { navy: ["#14213d", "#fff"], gold: ["#c9a96a", "#14213d"], green: ["#2f6f4f", "#fff"], burgundy: ["#7d2635", "#fff"], blue: ["#1d4ed8", "#fff"] };
+    const DEF_BLURB = document.querySelector(".hp-blurb").textContent;
+    function applyHomePage(c) {
+      let H = (c && c.settings && c.settings.home) || {}, photoData = "";
+      if (PREVIEW) { try { const pv = JSON.parse(localStorage.getItem("site_home_preview") || "null"); if (pv) { H = pv.home || H; photoData = pv.photoData || "";
+        applyNames(pv.teacherName || SITE.teacherName, pv.welcome || SITE.welcome); applyGrade(pv.grade); } } catch {} }
+      const q = s => document.querySelector(s);
+      q(".hp-blurb").textContent = H.blurb || DEF_BLURB;
+      q(".hp-card h2").textContent = H.cardTitle || "Sign in";
+      q(".hp-hero .teacher").classList.toggle("hidden", H.showName === false);
+      if (H.showGrade === false) q(".hp-hero .grade-line").hidden = true;
+      q(".hp-nav").classList.toggle("hidden", H.showNav === false);
+      const foot = q(".hp-foot");
+      if (H.footer) foot.textContent = H.footer; else { foot.innerHTML = "© "; const s = document.createElement("span"); s.setAttribute("data-teacher", ""); s.textContent = q(".hp-top .brand").textContent; foot.appendChild(s); }
+      const bg = q(".signin-bg"), photo = q("#signin-photo"), scene = q(".desk-scene");
+      const kind = H.bg === "photo" && (photoData || H.photo) ? "photo" : H.bg === "color" ? "color" : "drawing";
+      scene.classList.toggle("hidden", kind !== "drawing");
+      photo.style.backgroundImage = kind === "photo" ? `url("${photoData || H.photo}")` : "";
+      photo.classList.toggle("show", kind === "photo");
+      bg.style.background = kind === "color" ? (H.color || "#14213d") : "";
+      document.body.classList.toggle("hp-still", H.motion === false);
+      q(".home-tint").style.opacity = String(H.dim == null ? 1 : H.dim);
+      const main = q(".hp-main"); main.classList.toggle("lay-left", H.layout === "left"); main.classList.toggle("lay-center", H.layout === "center");
+      const a = ACCENTS[H.accent] || ACCENTS.navy; q(".home").style.setProperty("--hp-accent", a[0]); q(".home").style.setProperty("--hp-accent-text", a[1]);
+    }
+    if (PREVIEW) window.addEventListener("storage", e => { if (e.key === "site_home_preview") loadContent().then(applyHomePage).catch(() => applyHomePage(null)); });
+
     (async function () {
       const $ = id => document.getElementById(id);
       const form = $("si-form") || $("signin-form"), msg = $("si-msg"), btn = $("si-btn");
@@ -107,6 +137,7 @@
       let c = null, teacherLock = null;
       try { c = await loadContent(); } catch {}
       try { teacherLock = await fetchTeacherLock(); } catch {}
+      applyHomePage(c);
       const pa = c && c.settings.parentAccounts, lock = c && c.settings.siteLock;
       const profiles = !!(pa && pa.on && pa.apiKey);
       const open = c && !profiles && !(lock && lock.on && lock.hash);
@@ -149,7 +180,7 @@
           }
           if (teacherLock && teacherLock.salt) {                     // teacher password?
             let ok = false; try { ok = await teacherPasswordOK(teacherLock, pw); } catch {}
-            if (ok) { store("classroom_teacher_unlocked", teacherLock.salt, remember); location.href = "teacher.html"; return; }
+            if (ok) { store("classroom_teacher_unlocked", teacherLock.salt, remember); rememberPortalKey(ok, remember); location.href = "teacher.html"; return; }
           }
           if (lock && lock.hash && !profiles) {                       // class password?
             const h = await hashSitePassword(pw, lock.salt, lock.iterations);
@@ -161,12 +192,15 @@
           msg.textContent = err.message || "That password isn't right. Please try again.";
         } finally { btn.disabled = false; btn.textContent = "Sign in"; }
       });
-      // a real photo can replace the drawing: upload "signin-photo.jpg"
-      const img = new Image();
-      img.onload = () => { const el = $("signin-photo"); el.style.backgroundImage = "url(signin-photo.jpg)"; el.classList.add("show"); };
-      img.src = "signin-photo.jpg";
+      // older way: a photo uploaded as "signin-photo.jpg" replaces the drawing (when no background is chosen in Settings)
+      if (!(c && c.settings.home && c.settings.home.photo) && !(c && c.settings.home && c.settings.home.bg !== "drawing")) {
+        const img = new Image();
+        img.onload = () => { const el = $("signin-photo"); el.style.backgroundImage = "url(signin-photo.jpg)"; el.classList.add("show"); };
+        img.src = "signin-photo.jpg";
+      }
       addPasswordToggles(document);
       setRole("parent");
+      document.documentElement.classList.remove("hp-wait");     // show the sign-in box now that it's set up (no flash of the wrong one)
     })();
   </script>
 </body>

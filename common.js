@@ -151,6 +151,7 @@ function showGate(opt) {
       const ok = await opt.check(input.value);
       if (!ok) { msg.textContent = "That password isn't right. Please try again."; input.select(); return; }
       try { (rem.checked ? localStorage : sessionStorage).setItem(opt.storeKey, ok); } catch {}
+      if (opt.after) opt.after(rem.checked);
       gate.remove();
       opt.reveal();
     } catch { msg.textContent = "That password isn't right. Please try again."; }
@@ -463,8 +464,17 @@ async function teacherPasswordOK(lock, pw) {
   const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveKey"]);
   const key = await crypto.subtle.deriveKey({ name: "PBKDF2", salt: fromB64(lock.salt), iterations: lock.iterations, hash: "SHA-256" },
     base, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
-  await crypto.subtle.decrypt({ name: "AES-GCM", iv: fromB64(lock.iv) }, key, fromB64(lock.data));   // throws if wrong
-  return true;
+  const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: fromB64(lock.iv) }, key, fromB64(lock.data));   // throws if wrong
+  return new TextDecoder().decode(plain) || true;      // the GitHub key it unlocks
+}
+// One sign-in for the whole Teacher Area: the same password also opens Parent Portal Settings and Settings.
+const PORTAL_SESSION_KEY = "classroom_portal_session";
+function rememberPortalKey(token, remember) {
+  if (typeof token !== "string" || !token) return;
+  try { (remember ? localStorage : sessionStorage).setItem(PORTAL_SESSION_KEY, token); (remember ? sessionStorage : localStorage).removeItem(PORTAL_SESSION_KEY); } catch {}
+}
+function teacherSignOut() {
+  try { [localStorage, sessionStorage].forEach(s => { s.removeItem("classroom_teacher_unlocked"); s.removeItem("classroom_site_unlocked"); s.removeItem(PORTAL_SESSION_KEY); }); } catch {}
 }
 async function checkTeacherLock() {
   const reveal = () => document.documentElement.classList.remove("gate-wait");
@@ -473,6 +483,7 @@ async function checkTeacherLock() {
   let saved = null;
   try { saved = localStorage.getItem(TEACHER_UNLOCK_KEY) || sessionStorage.getItem(TEACHER_UNLOCK_KEY); } catch {}
   if (saved && saved === lock.salt) return reveal();
+  let unlockedKey = null;
   const footer = el("p", "gate-foot");
   const a = el("a", null, "← Back to sign in");
   a.href = "index.html";
@@ -480,7 +491,8 @@ async function checkTeacherLock() {
   showGate({
     title: "Teacher Area",
     sub: "Enter your Teacher Portal password.",
-    check: async pw => (await teacherPasswordOK(lock, pw)) ? lock.salt : null,
+    check: async pw => { const tok = await teacherPasswordOK(lock, pw); unlockedKey = tok; return tok ? lock.salt : null; },
+    after: remember => rememberPortalKey(unlockedKey, remember),
     storeKey: TEACHER_UNLOCK_KEY,
     footer,
     reveal
@@ -530,6 +542,9 @@ function normalizeContent(c) {
   if (!c.settings.welcome) c.settings.welcome = SITE.welcome;
   // Contact details (Settings page in the Teacher Area); fall back to data.js.
   if (typeof c.settings.grade !== "string") c.settings.grade = SITE.grade || "";
+  // the website's home (sign-in) page — Settings → Website Home Page
+  c.settings.home = Object.assign({ blurb: "", cardTitle: "Sign in", footer: "", showName: true, showGrade: true, showNav: true,
+    bg: "drawing", motion: true, photo: "", color: "#14213d", dim: 1, layout: "right", accent: "navy" }, c.settings.home);
   ["phone", "contactEmail", "formEmail"].forEach(k => {
     if (typeof c.settings[k] !== "string") c.settings[k] = SITE[k] || "";
     if (c.settings[k] || k === "formEmail") SITE[k] = c.settings[k];

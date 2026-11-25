@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
   <title>Classroom Tools – Rabbi Eisgrau</title>
-  <link rel="stylesheet" href="style.css?v=20261232">
-  <script src="data.js?v=20261232"></script>
-  <script src="common.js?v=20261232"></script>
-  <script src="sync.js?v=20261232"></script>
-  <script src="sections.js?v=20261232"></script>
+  <link rel="stylesheet" href="style.css?v=20261236">
+  <script src="data.js?v=20261236"></script>
+  <script src="common.js?v=20261236"></script>
+  <script src="sync.js?v=20261236"></script>
+  <script src="sections.js?v=20261236"></script>
 </head>
 <body class="portal tshell" data-page="class">
   <aside class="ts-side">
@@ -21,11 +21,12 @@
     <section id="classroom"></section>
     <p class="tools-note">Your student lists, raffle tickets and prizes are saved only in this browser on this device.</p>
   </div>
-  <script src="classroom.js?v=20261232"></script>
+  <script src="timer.js?v=20261236"></script>
+  <script src="classroom.js?v=20261236"></script>
   <script>
     const crEl = document.getElementById("classroom");
     Classroom.open(crEl);
-    const CR_DESC = { students: "Your class list and who's absent today", groups: "Make random groups in one click", number: "Pick a random number", picker: "Pick a random student", raffle: "Tickets, a drawing and a winner", prizes: "Mystery prize boxes" };
+    const CR_DESC = { students: "Your class list and who's absent today", groups: "Make random groups in one click", number: "Pick a random number", picker: "Pick a random student", raffle: "Tickets, a drawing and a winner", prizes: "Mystery prize boxes", timer: "Countdown, stopwatch and work/break intervals" };
     const crItems = [...crEl.querySelectorAll(".cr-tool")].map(b => ({ key: b.dataset.tool, label: b.textContent.trim(), icon: b.querySelector(".cr-tool-icon").innerHTML, desc: CR_DESC[b.dataset.tool] }));
     TeacherSections.init({
       id: "classroom", title: "Classroom Tools", items: crItems, hashPrefix: "",
@@ -43,7 +44,7 @@
   </script>
   <script>
     document.getElementById("ts-signout").addEventListener("click", () => {
-      try { [localStorage, sessionStorage].forEach(s => { s.removeItem("classroom_teacher_unlocked"); s.removeItem("classroom_site_unlocked"); }); } catch {}
+      teacherSignOut();
       location.href = "index.html";
     });
     (function () { const n = (document.querySelector(".ts-brand strong").textContent || "").split(/\s+/).filter(Boolean); document.getElementById("ts-mono").textContent = n.slice(-2).map(w => w[0]).join("").toUpperCase(); })();

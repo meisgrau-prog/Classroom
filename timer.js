@@ -115,7 +115,8 @@
     else if (wake) { try { wake.release(); } catch {} wake = null; }
   });
   function setRing(frac) { ringFg.style.strokeDashoffset = String(C * (1 - Math.max(0, Math.min(1, frac)))); }
-  function title(text) { document.title = text ? text + " – Teacher Tools" : "Teacher Tools – " + (SITE.teacherName || ""); }
+  function title(text) { if (!document.body.dataset.baseTitle) document.body.dataset.baseTitle = document.title.replace(/^⏱.*?– |^⏰.*?– /, "");
+    document.title = text ? text + " – " + document.body.dataset.baseTitle : document.body.dataset.baseTitle; }
 
   /* ---------- TIMER ---------- */
   function buildTimer() {

@@ -37,6 +37,10 @@
       h("a", { class: "tn-btn tn-home", href: "teacher.html" }, h("span", { html: HOME }), h("span", null, "Home")),
       trail);
     main.insertBefore(bar, main.firstChild);
+    // a soft shadow once it's stuck to the top; on phones it sits just under the menu bar
+    const side = document.querySelector(".ts-side");
+    const fit = () => { if (side) document.documentElement.style.setProperty("--side-h", (matchMedia("(max-width: 860px)").matches ? side.offsetHeight : 0) + "px"); bar.classList.toggle("stuck", window.scrollY > 10); };
+    window.addEventListener("scroll", fit, { passive: true }); window.addEventListener("resize", fit); fit();
     setTrail(sectionTitle);
     return bar;
   }

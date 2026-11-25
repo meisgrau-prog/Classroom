@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
   <title>Teacher Portal – Rabbi Eisgrau</title>
-  <link rel="stylesheet" href="style.css?v=20261232">
-  <script src="data.js?v=20261232"></script>
-  <script src="common.js?v=20261232"></script>
-  <script src="sync.js?v=20261232"></script>
-  <script src="sections.js?v=20261232"></script>
+  <link rel="stylesheet" href="style.css?v=20261236">
+  <script src="data.js?v=20261236"></script>
+  <script src="common.js?v=20261236"></script>
+  <script src="sync.js?v=20261236"></script>
+  <script src="sections.js?v=20261236"></script>
 </head>
 <body class="portal tshell">
   <aside class="ts-side">
@@ -129,16 +129,9 @@
             <input type="text" id="set-name" placeholder="e.g. Rabbi Eisgrau">
           </div>
           <div class="field">
-            <label for="set-welcome">Welcome heading (home page)</label>
-            <input type="text" id="set-welcome" placeholder="e.g. Welcome to My Class">
-          </div>
-        </div>
-        <div class="two">
-          <div class="field">
             <label for="set-grade">Grade / class (optional)</label>
             <input type="text" id="set-grade" placeholder="e.g. 8th Grade">
           </div>
-          <div class="field"></div>
         </div>
         <p class="help" style="margin:0">The teacher name and grade show on the sign-in page, the Parent Portal, the Teacher Area, and at the top of every page.</p>
         <div class="two" style="margin-top:14px">
@@ -159,6 +152,55 @@
 
       </div>
 
+      <div class="card hidden" id="site-home-card">
+        <h2 class="section-title">Website Home Page</h2>
+        <p class="help" style="margin:0 0 12px">The first page everyone sees (the sign-in page). Changes show in the preview right away; click <b>Save &amp; Publish</b> to put them on the website.</p>
+        <div class="sh-grid">
+          <div class="sh-form">
+            <h3 class="sh-h">Words</h3>
+            <div class="field"><label for="set-welcome">Big heading</label><input type="text" id="set-welcome" placeholder="e.g. Welcome to My Class"></div>
+            <div class="field"><label for="sh-blurb">Message under it</label><textarea id="sh-blurb" rows="3" placeholder="Classwork, homework, news and programs for our class families — all in one place. Please sign in to continue."></textarea></div>
+            <div class="two">
+              <div class="field"><label for="sh-card">Sign-in box title</label><input type="text" id="sh-card" placeholder="Sign in"></div>
+              <div class="field"><label for="sh-footer">Bottom line</label><input type="text" id="sh-footer" placeholder="© your name"></div>
+            </div>
+            <div class="sh-checks">
+              <label class="check-line"><input type="checkbox" id="sh-name"> Show my name</label>
+              <label class="check-line"><input type="checkbox" id="sh-grade"> Show my grade</label>
+              <label class="check-line"><input type="checkbox" id="sh-nav"> “Sign in” button at the top</label>
+            </div>
+            <h3 class="sh-h">Background</h3>
+            <div class="pl-seg" id="sh-bg">
+              <button type="button" class="pl-seg-btn" data-v="drawing">Classroom drawing</button>
+              <button type="button" class="pl-seg-btn" data-v="photo">My photo</button>
+              <button type="button" class="pl-seg-btn" data-v="color">Plain color</button>
+            </div>
+            <div class="sh-sub" id="sh-bg-drawing"><label class="check-line"><input type="checkbox" id="sh-motion"> Slow camera movement</label></div>
+            <div class="sh-sub" id="sh-bg-photo">
+              <div class="actions" style="margin:0">
+                <button type="button" class="button secondary" id="sh-photo-btn">Choose a photo…</button>
+                <button type="button" class="small-btn danger" id="sh-photo-remove">Remove photo</button>
+                <input type="file" id="sh-photo" accept="image/*" class="hidden">
+              </div>
+              <p class="help" id="sh-photo-msg" style="margin:6px 0 0">A wide classroom or school photo works best. It's made smaller automatically.</p>
+            </div>
+            <div class="sh-sub" id="sh-bg-color"><label class="sh-color">Color <input type="color" id="sh-color"></label></div>
+            <label class="sh-range">Darkness over the background <span>Lighter</span><input type="range" id="sh-dim" min="0.15" max="1" step="0.05"><span>Darker</span></label>
+            <h3 class="sh-h">Layout</h3>
+            <div class="sh-row"><span>Sign-in box</span>
+              <div class="pl-seg" id="sh-layout"><button type="button" class="pl-seg-btn" data-v="left">Left</button><button type="button" class="pl-seg-btn" data-v="center">Center</button><button type="button" class="pl-seg-btn" data-v="right">Right</button></div></div>
+            <div class="sh-row"><span>Button color</span>
+              <div class="sh-swatches" id="sh-accent">
+                <button type="button" data-v="navy" style="--sw:#14213d" title="Navy"></button><button type="button" data-v="gold" style="--sw:#c9a96a" title="Gold"></button><button type="button" data-v="green" style="--sw:#2f6f4f" title="Green"></button><button type="button" data-v="burgundy" style="--sw:#7d2635" title="Burgundy"></button><button type="button" data-v="blue" style="--sw:#1d4ed8" title="Blue"></button>
+              </div></div>
+            <div class="actions"><button type="button" class="small-btn" id="sh-reset">Back to the original look</button></div>
+          </div>
+          <div class="sh-preview-wrap">
+            <div class="sh-preview-head"><span>Preview</span><a href="index.html?preview=1" target="_blank" rel="noopener" class="small-btn" style="text-decoration:none">Open full size ↗</a></div>
+            <div class="sh-preview"><iframe id="sh-frame" title="Home page preview" tabindex="-1"></iframe></div>
+          </div>
+        </div>
+      </div>
       <div id="sync-settings" class="hidden"></div>
       <div id="home-settings" class="hidden"></div>
 
@@ -290,9 +332,9 @@
   </div>
   </div>
 
-  <script src="portal.js?v=20261232"></script>
-  <script src="classroom.js?v=20261232"></script>
-  <script src="parentlist.js?v=20261232"></script>
-  <script src="teacherhome.js?v=20261232"></script>
+  <script src="portal.js?v=20261236"></script>
+  <script src="classroom.js?v=20261236"></script>
+  <script src="parentlist.js?v=20261236"></script>
+  <script src="teacherhome.js?v=20261236"></script>
 </body>
 </html>
