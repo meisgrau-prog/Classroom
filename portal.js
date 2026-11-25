@@ -169,11 +169,14 @@ function portalView() {
   const TITLES = { posts: "Parent Portal Settings", settings: "Settings" };
   $("settings-card").classList.toggle("hidden", view !== "settings");
   $("home-settings").classList.toggle("hidden", view !== "settings");
+  $("sync-settings").classList.toggle("hidden", view !== "settings");
+  if (view === "settings" && window.TeacherSync) TeacherSync.settingsCard($("sync-settings"));
   $("posts-area").classList.toggle("hidden", view !== "posts");
   if (view === "settings" && window.TeacherHome && !$("home-settings").children.length) TeacherHome.settingsCard($("home-settings"));
   if (location.hash === "#portal-settings" || location.hash === "#access") { const t = document.querySelector('.tab[data-tab="access"]'); if (t) t.click(); }
   if (location.hash === "#parents") { const t = document.querySelector('.tab[data-tab="parents"]'); if (t) t.click(); }
   $("pp-title").textContent = TITLES[view];
+  if (window.TeacherSections) { TeacherSections.navBar(TITLES[view]); if (sectionsReady) TeacherSections.suspend(view === "settings", "Settings"); else TeacherSections.setTrail(TITLES[view]); }
   $("changepw-open").classList.toggle("hidden", view !== "settings");
   document.querySelectorAll(".ts-item[data-nav]").forEach(a => {
     const on = a.dataset.nav === view;
@@ -190,6 +193,39 @@ function openEditor() {
   $("savebar").classList.remove("hidden");
   renderAll();
   setDirty(false);
+  initSections();
+}
+// Parent Portal Settings as a page of choices (if chosen in Settings → Teacher Area sections)
+var sectionsReady = false;
+function initSections() {
+  if (sectionsReady || !window.TeacherSections) return;
+  sectionsReady = true;
+  const I = p => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + p + '</svg>';
+  const META = {
+    classwork: ["Post classwork for each subject", I('<path d="M12 6c-2-1.7-5-2-8-1.7v13c3-.3 6 0 8 1.7 2-1.7 5-2 8-1.7v-13c-3-.3-6 0-8 1.7z"/><path d="M12 6v13"/>')],
+    homework: ["Tonight's homework and files", I('<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>')],
+    news: ["Announcements for families", I('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h6v4H7zM15 8h2M15 12h2M7 16h10"/>')],
+    programs: ["Upcoming programs and events", I('<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M12 13l1.2 2.4 2.6.4-1.9 1.8.5 2.6-2.4-1.3-2.4 1.3.5-2.6-1.9-1.8 2.6-.4z"/>')],
+    banners: ["“No homework tonight!” and other banners", I('<path d="M4 4h16v10H4z"/><path d="M4 14l3 6M20 14l-3 6"/><path d="M8 9h8"/>')],
+    access: ["Who can open it, class password, parent profiles, button words", I('<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>')],
+    parents: ["See, edit, block or delete parent profiles", I('<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6.5 6.5-6.5s6.5 2.9 6.5 6.5"/><circle cx="17.5" cy="9" r="2.5"/><path d="M16 14.3c3 .3 5.5 2.8 5.5 5.7"/>')]
+  };
+  const hsh = location.hash.slice(1);
+  TeacherSections.init({
+    id: "portal", title: "Parent Portal Settings", hashPrefix: "tab-", ignore: /^#settings$/,
+    items: [...document.querySelectorAll(".tab")].map(t => ({ key: t.dataset.tab, label: t.textContent.trim(), desc: (META[t.dataset.tab] || [])[0], icon: (META[t.dataset.tab] || [])[1] })),
+    bar: () => [document.querySelector(".tabs")],
+    content: () => [...document.querySelectorAll("#posts-area .panel")],
+    place: el => document.querySelector(".tabs").after(el),
+    open: k => { const t = document.querySelector(`.tab[data-tab="${k}"]`); if (t) t.click(); },
+    initial: hsh === "portal-settings" || hsh === "access" ? "access" : hsh === "parents" ? "parents" : hsh.startsWith("tab-") ? hsh.slice(4) : null,
+    onBar: () => {
+      const on = document.querySelector('.tab[aria-selected="true"]');
+      if (on && location.hash !== "#settings") TeacherSections.setTrail("Parent Portal Settings", on.textContent.trim());
+      document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => TeacherSections.setTrail("Parent Portal Settings", t.textContent.trim())));
+    }
+  });
+  if (location.hash === "#settings") TeacherSections.suspend(true, "Settings");
 }
 
 function busy(btn, on, text) {
@@ -987,3 +1023,4 @@ function checkKeyHash() {
 }
 checkKeyHash();
 window.addEventListener("hashchange", checkKeyHash);
+if (window.TeacherSections) TeacherSections.navBar(location.hash === "#settings" ? "Settings" : "Parent Portal Settings");

@@ -1265,5 +1265,5 @@
     }
   };
 
-  window.Classroom = { open, readSheetRows, cleanRows, detectColumns, _test: { parsePrizeLine, rowsToNames, detectColumns, namesFromColumns, cleanRows, parseDelimited, readXlsx, shuffle, randInt } };
+  window.Classroom = { open, show: k => show(k), readSheetRows, cleanRows, detectColumns, _test: { parsePrizeLine, rowsToNames, detectColumns, namesFromColumns, cleanRows, parseDelimited, readXlsx, shuffle, randInt } };
 })();

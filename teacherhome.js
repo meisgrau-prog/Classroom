@@ -182,7 +182,7 @@
       },
       quick: () => h("div", null, h("h2", { class: "ts-h2" }, "Quick access"), h("section", { class: "ts-cards" },
         [["classroom.html", ICON.class, "Classroom Tools", "Students, groups, random picks, raffle, prize boxes"],
-         ["teacher-tools.html", ICON.phone, "Teacher Tools", "Phone log, gradebook, student info, support & PDF tools"],
+         ["teacher-tools.html", ICON.phone, "Teacher Tools", "Phone log, gradebook, student info, support, PDF tools & timer"],
          ["portal.html", ICON.portal, "Parent Portal Settings", "Post classwork, homework, news & banners; who can see it"],
          ["parents.html", ICON.eye, "View Parent Portal", "See the site the way families see it"]].map(([href, ico, t, s]) =>
           h("a", { class: "ts-card", href }, h("span", { class: "ts-card-ico", html: ico }), h("strong", null, t), h("small", null, s)))))
@@ -228,6 +228,26 @@
       h("div", { class: "actions" },
         h("a", { class: "button secondary", href: "teacher.html", style: "text-decoration:none" }, "See home page"),
         h("button", { type: "button", class: "small-btn", onclick: () => { if (!confirm("Go back to the original home page choices?")) return; const r = getHome(); delete r.show; delete r.order; saveHome(r); settingsCard(container); } }, "Reset to original"))));
+
+    // --- how each Teacher Area section opens ---
+    const SEC_KEY = "teacher_sections_v1";
+    const secRead = () => { try { return JSON.parse(localStorage.getItem(SEC_KEY) || "{}") || {}; } catch { return {}; } };
+    const secRows = h("div", { class: "sec-set" });
+    [["classroom", "Classroom Tools", "Students, groups, random picks, raffle, prize boxes"], ["tools", "Teacher Tools", "Phone log, gradebook, student info, support, PDF tools, timer"], ["portal", "Parent Portal Settings", "Classwork, homework, news, programs, banners, access, parents"]].forEach(([id, label, sub]) => {
+      const cur = secRead()[id] || "bar";
+      const seg = h("div", { class: "pl-seg" });
+      [["bar", "Tool bar"], ["buttons", "Buttons"], ["list", "List"]].forEach(([v, l]) => seg.appendChild(h("button", { type: "button", class: "pl-seg-btn", "aria-pressed": cur === v ? "true" : "false", "data-sec": id, "data-val": v, onclick: e => {
+        const s = secRead(); s[id] = v; try { localStorage.setItem(SEC_KEY, JSON.stringify(s)); } catch {}
+        seg.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b === e.currentTarget ? "true" : "false"));
+        secMsg.className = "status ok"; secMsg.textContent = `✓ ${label} will open with ${v === "bar" ? "the tool bar (your last tool)" : v === "buttons" ? "a page of buttons" : "a list of choices"}.`;
+      } }, l)));
+      secRows.appendChild(h("div", { class: "sec-set-row" }, h("div", null, h("strong", null, label), h("small", null, sub)), seg));
+    });
+    const secMsg = h("p", { class: "status" });
+    container.appendChild(h("div", { class: "card" },
+      h("h2", { class: "section-title" }, "Teacher Area Sections"),
+      h("p", { class: "help" }, "Choose how each section opens. “Tool bar” shows the tools across the top and opens the last one you used. “Buttons” or “List” opens a page of choices; press one to go to that tool, and use ‹ Back to return to the choices. Saved on this device."),
+      secRows, secMsg));
 
     container.appendChild(h("div", { class: "card" },
       h("h2", { class: "section-title" }, "Birthdays, Parents & Student Info"),

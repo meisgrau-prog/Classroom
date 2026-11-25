@@ -80,6 +80,9 @@ service cloud.firestore {
     match /notes/{uid} {
       allow read, write: if isTeacher();
     }
+    match /sync/{id} {
+      allow read, write: if isTeacher();
+    }
   }
 }`;
   }

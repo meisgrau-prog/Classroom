@@ -5,9 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
   <title>Teacher Tools – Rabbi Eisgrau</title>
-  <link rel="stylesheet" href="style.css?v=20261224">
-  <script src="data.js?v=20261224"></script>
-  <script src="common.js?v=20261224"></script>
+  <link rel="stylesheet" href="style.css?v=20261232">
+  <script src="data.js?v=20261232"></script>
+  <script src="common.js?v=20261232"></script>
+  <script src="sync.js?v=20261232"></script>
+  <script src="sections.js?v=20261232"></script>
 </head>
 <body class="portal tshell" data-page="tools">
   <aside class="ts-side">
@@ -22,6 +24,7 @@
       <button type="button" data-tool="info" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2.5"/><path d="M5 17c.6-2 2.1-3 4-3s3.4 1 4 3M15 9h3M15 13h3"/></svg>Student Info</button>
       <button type="button" data-tool="support" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z"/><path d="M8 12h2l1.5-3 2 6 1.5-3h1.5"/></svg>Student Support</button>
       <button type="button" data-tool="pdfjoin" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 3H7a2 2 0 0 0-2 2v10"/><path d="M13 3v4h4"/><path d="M17 7v1"/><path d="M9 9h6a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2z"/><path d="M10 15h4M12 13v4"/></svg>PDF Tools</button>
+      <button type="button" data-tool="timer" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 9.5v4l2.5 2M10 2.5h4M12 2.5V6M18.5 6.5l1.5-1.5"/></svg>Timer</button>
       <span class="tt-glider" aria-hidden="true"></span>
     </nav>
     <section id="phonelog"></section>
@@ -29,17 +32,20 @@
     <section id="info" class="hidden"></section>
     <section id="support" class="hidden"></section>
     <section id="pdfjoin" class="hidden"></section>
+    <section id="timer" class="hidden"></section>
   </div>
-  <script src="phonelog.js?v=20261224"></script>
-  <script src="gradebook.js?v=20261224"></script>
-  <script src="classroom.js?v=20261224"></script>
-  <script src="studentinfo.js?v=20261224"></script>
-  <script src="support.js?v=20261224"></script>
-  <script src="pdfjoin.js?v=20261224"></script>
+  <script src="phonelog.js?v=20261232"></script>
+  <script src="gradebook.js?v=20261232"></script>
+  <script src="classroom.js?v=20261232"></script>
+  <script src="studentinfo.js?v=20261232"></script>
+  <script src="support.js?v=20261232"></script>
+  <script src="pdfjoin.js?v=20261232"></script>
+  <script src="timer.js?v=20261232"></script>
   <script>
     PhoneLog.open(document.getElementById("phonelog"));
     let gbOpen = false;
-    const TOOLS = ["phonelog", "gradebook", "info", "support", "pdfjoin"];
+    const TOOLS = ["phonelog", "gradebook", "info", "support", "pdfjoin", "timer"];
+    let tmOpen = false;
     let pjOpen = false;
     // gold highlight that slides to the chosen tool
     function moveGlider(animate) {
@@ -60,17 +66,34 @@
       });
       if (name === "info") StudentInfo.open(document.getElementById("info"));
       if (name === "support") StudentSupport.open(document.getElementById("support"));
+      if (name === "timer" && !tmOpen) { TeacherTimer.open(document.getElementById("timer")); tmOpen = true; }
       if (name === "pdfjoin" && !pjOpen) { PdfJoiner.open(document.getElementById("pdfjoin")); pjOpen = true; }
       if (name === "gradebook" && !gbOpen) { Gradebook.open(document.getElementById("gradebook")); gbOpen = true; }
       try { localStorage.setItem("teacher_tools_last", name); } catch {}
       moveGlider(animate);
+      const lb = document.querySelector(`.tt-switch [data-tool="${name}"]`);
+      if (lb && TeacherSections.styleOf("tools") === "bar") TeacherSections.setTrail("Teacher Tools", lb.textContent.trim());
     }
     window.addEventListener("resize", () => moveGlider(false));
     document.querySelectorAll(".tt-switch button").forEach(b => b.addEventListener("click", () => { if (b.getAttribute("aria-selected") !== "true") tool(b.dataset.tool, true); }));
     const tab = location.hash.slice(1);
-    if (["gradebook", "info", "support", "pdfjoin"].includes(tab)) tool(tab);
-    else if (["follow", "history", "students", "log", "settings"].includes(tab)) { tool("phonelog"); document.querySelector(`.pl-tabs [data-tab="${tab}"]`).click(); }
-    else { let last = "phonelog"; try { last = localStorage.getItem("teacher_tools_last") || last; } catch {} tool(TOOLS.includes(last) ? last : "phonelog"); }
+    const SUB = ["follow", "history", "students", "log", "settings"];
+    const DESC = { phonelog: "Log calls, emails and follow-ups with families", gradebook: "Enter grades, see the dashboard, download Excel", info: "Birthdays, parents, phone numbers and more", support: "What you did to help each student — and if it worked", pdfjoin: "Join PDFs, or split and rearrange pages", timer: "Countdown timer, stopwatch with laps, and work/break intervals" };
+    TeacherSections.init({
+      id: "tools", title: "Teacher Tools",
+      items: [...document.querySelectorAll(".tt-switch button")].map(b => ({ key: b.dataset.tool, label: b.textContent.trim(), icon: b.querySelector("svg").outerHTML, desc: DESC[b.dataset.tool] })),
+      bar: () => [document.querySelector(".tt-switch")],
+      content: () => TOOLS.map(id => document.getElementById(id)),
+      place: el => document.querySelector(".tt-switch").after(el),
+      open: k => tool(k),
+      initial: TOOLS.includes(tab) ? tab : SUB.includes(tab) ? "phonelog" : null,
+      onBar: () => {
+        if (TOOLS.includes(tab) && tab !== "phonelog") tool(tab);
+        else if (SUB.includes(tab)) tool("phonelog");
+        else { let last = "phonelog"; try { last = localStorage.getItem("teacher_tools_last") || last; } catch {} tool(TOOLS.includes(last) ? last : "phonelog"); }
+      }
+    });
+    if (SUB.includes(tab)) document.querySelector(`.pl-tabs [data-tab="${tab}"]`).click();
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => moveGlider(false));
   </script>
   <script>

@@ -39,7 +39,11 @@ function teacherBackButton() {
   a.href = "teacher.html";
   a.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg><span>Back to Teacher Area</span>';
   a.title = "You're viewing the Parent Portal as the teacher";
-  document.body.appendChild(a);
+  a.querySelector("span").textContent = "Teacher Area";
+  // top-left: next to the Home button in the top bar, or the corner of the Parent Portal home page
+  const bar = document.querySelector(".topbar"), home = bar && bar.querySelector(".home-btn");
+  if (home) { const left = el("div", "tb-left"); home.parentNode.insertBefore(left, home); left.append(a, home); a.classList.add("in-bar"); }
+  else { a.classList.add("corner"); document.body.appendChild(a); }
 }
 document.addEventListener("DOMContentLoaded", () => {
   if (IS_PORTAL) return;
