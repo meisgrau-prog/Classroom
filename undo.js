@@ -12,7 +12,8 @@
     teacher_gradebook_v1: { section: "gradebook", name: "Gradebook", describe: descGrades },
     teacher_student_info_v1: { section: "info", name: "Student Info", describe: descInfo },
     teacher_support_v1: { section: "support", name: "Student Support", describe: descSupport },
-    teacher_attendance_v1: { section: "attendance", name: "Attendance", describe: descAttendance }
+    teacher_attendance_v1: { section: "attendance", name: "Attendance", describe: descAttendance },
+    teacher_seating_v1: { section: "seating", name: "Seating Chart", describe: () => "Changed the seating chart" }
   };
   const KEEP = 30, MAX_BYTES = 1500000, MERGE_MS = 4000;
   const ls = window.localStorage;

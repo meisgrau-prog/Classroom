@@ -422,6 +422,11 @@
       h("button", { type: "button", class: "pl-seg-btn", "aria-pressed": view.dashPreset === k ? "true" : "false", onclick: () => { view.dashPreset = k; drawDash(); } }, l)));
     p.appendChild(h("div", { class: "card pl-bar" }, presets, h("label", null, "From ", fromIn), h("label", null, "to ", toIn),
       h("span", { class: "pl-bar-btns" },
+        h("button", { type: "button", class: "button secondary", onclick: e => {
+          const shownC = cats().filter(c => c.show && c.better !== "text");
+          const lines = [["Student", ...shownC.map(c => c.name)].join("\t")].concat(names.map(s => [s, ...shownC.map(c => score(c, s, from, to).text)].join("\t")));
+          copyText(lines.join("\n"), e.currentTarget);
+        } }, "📋 Copy table"),
         h("button", { type: "button", class: "button secondary", onclick: () => download(`Gradebook ${from} to ${to}.xlsx`, exportWorkbook(from, to)) }, "Download Excel"),
         h("button", { type: "button", class: "button secondary", onclick: () => window.print() }, "Print"))));
     p.appendChild(h("h2", { class: "gb-print-title" }, `Gradebook — ${fmt(from, { month: "short", day: "numeric" })} to ${fmt(to, { month: "short", day: "numeric", year: "numeric" })}`));
@@ -459,6 +464,14 @@
         shown.map(c => { const x = score(c, s, from, to); return h("td", { class: "gb-c gb-go " + tone(x.p), title: `Open ${c.name} for ${s} in Enter Grades`, onclick: () => goGrid(c, s, from, to) }, x.text); })))));
     p.appendChild(h("div", { class: "card gb-scroll" }, h("h3", null, "Students ", h("small", { class: "help" }, `${fmt(from, { month: "short", day: "numeric" })} – ${fmt(to, { month: "short", day: "numeric", year: "numeric" })}`)), table,
       h("p", { class: "help" }, `Green ≥ ${G.settings.good}% · gold ≥ ${G.settings.ok}% · red below. Click a grade to open it in Enter Grades; click a name for details.`)));
+  }
+  // copy text (tab-separated → pastes into Excel / Google Sheets as cells)
+  async function copyText(txt, btn) {
+    let ok = false;
+    try { await navigator.clipboard.writeText(txt); ok = true; } catch {}
+    if (!ok) { const ta = h("textarea", { style: { position: "fixed", left: "-9999px" } }); ta.value = txt; document.body.appendChild(ta); ta.select(); try { ok = document.execCommand("copy"); } catch {} ta.remove(); }
+    if (btn) { const t = btn.textContent; btn.textContent = ok ? "✓ Copied — paste anywhere" : "Couldn't copy"; setTimeout(() => btn.textContent = t, 2200); }
+    return ok;
   }
   // jump from the dashboard to that grade in Enter Grades
   function goGrid(c, stu, from, to) {
@@ -520,6 +533,11 @@
         h("label", null, "Week of ", wk),
         h("button", { type: "button", class: "small-btn", onclick: () => { view.week = addDays(view.week, 7); drawGrid(); } }, "Next ›"),
         h("button", { type: "button", class: "small-btn", onclick: () => { view.week = weekStartOf(today()); drawGrid(); } }, "This week")),
+      c.better === "text" ? null : h("span", { class: "gb-copy" },
+        h("button", { type: "button", class: "small-btn", title: "Copy each student's name and total", onclick: e => copyTotals(true, e.currentTarget) }, "📋 Copy names + totals"),
+        h("button", { type: "button", class: "small-btn", title: "Copy just the totals column, in class-list order", onclick: e => copyTotals(false, e.currentTarget) }, "📋 Copy totals only"),
+        h("button", { type: "button", class: "small-btn", title: "Download this week's grades and totals as an Excel sheet", onclick: () => gridExcel() }, "⬇ Excel"),
+        h("button", { type: "button", class: "small-btn", title: "Download just the names and totals as an Excel sheet", onclick: () => gridExcel(true) }, "⬇ Totals only (Excel)")),
       h("span", { class: "gb-fill" }, h("label", null, "Fill blanks with ", fillIn),
         h("button", { type: "button", class: "small-btn", onclick: () => fillBlanks(fillIn.value, true) }, "selected column"),
         h("button", { type: "button", class: "small-btn", onclick: () => fillBlanks(fillIn.value, false) }, "whole week"))));
@@ -549,6 +567,27 @@
       if (r >= 0) { let col = 0; dates.forEach((d, i) => { if ((getV(c.id, sk, d, names[r]) || "") !== "") col = i; });
         setTimeout(() => { Grid.go(r, col); const row = grid.querySelectorAll("tbody tr")[r]; if (row) row.scrollIntoView({ block: "center", behavior: "smooth" }); }, 60); }
     }
+  }
+  function gridExcel(totalsOnly) {
+    const tbl = panels.grid.querySelector(".gb-grid"); if (!tbl) return;
+    const c = cat(view.cat), sk = view.subj;
+    if (totalsOnly) {
+      const last = [...tbl.querySelectorAll("thead th")].pop().textContent.trim() || "Total";
+      const title = c.name + (sk && sk !== "_" ? " · " + sk : "");
+      const rows = [[{ v: title + " — week of " + fmt(view.week, { month: "long", day: "numeric", year: "numeric" }), s: 4 }], [], [{ v: "Student", s: 1 }, { v: last, s: 1 }]];
+      tbl.querySelectorAll("tbody tr:not(.gb-foot)").forEach(tr => { const n = tr.querySelector("th").textContent.trim(), t = ((tr.querySelector(".gb-avg") || {}).textContent || "").trim(); rows.push([n, /^-?\d+(\.\d+)?$/.test(t) ? +t : t]); });
+      excel([{ name: "Totals", rows, widths: [26, 16], freeze: [0, 3] }], `${title} totals - week of ${view.week}.xlsx`);
+      return;
+    }
+    const head = [...tbl.querySelectorAll("thead th")].map((th, i) => i ? th.textContent : "Student");
+    const rows = [[{ v: c.name + (sk && sk !== "_" ? " · " + sk : "") + " — week of " + fmt(view.week, { month: "long", day: "numeric", year: "numeric" }), s: 4 }], [], head.map(t => ({ v: t, s: 1 }))];
+    tbl.querySelectorAll("tbody tr").forEach(tr => rows.push([...tr.children].map((td, i) => { const t = td.textContent.trim(); const n = i > 0 && /^-?\d+(\.\d+)?$/.test(t) ? +t : t; return i === 0 || tr.classList.contains("gb-foot") ? { v: n, s: 4 } : n; })));
+    excel([{ name: sheetName(c.name, new Set()), rows, widths: [22, ...head.slice(1).map(() => 12)], freeze: [1, 3] }], `${c.name}${sk && sk !== "_" ? " " + sk : ""} - week of ${view.week}.xlsx`);
+  }
+  function copyTotals(withNames, btn) {
+    const tbl = panels.grid.querySelector(".gb-grid"); if (!tbl) return;
+    const rows = [...tbl.querySelectorAll("tbody tr:not(.gb-foot)")].map(tr => { const n = tr.querySelector("th").textContent, t = (tr.querySelector(".gb-avg") || {}).textContent || ""; return withNames ? n + "\t" + t : t; });
+    copyText(rows.join("\n"), btn);
   }
   function fillBlanks(v, colOnly) {
     v = String(v || "").trim(); if (!v) { alert("Type a value to fill in first."); return; }
@@ -960,5 +999,7 @@
         : (!has(c, from, to) ? { name: c.name, when: "this week", color: c.color } : null)).filter(Boolean);
     return { students: names.length, from, to, averages, attention, stars: stars.filter(s => s.p >= G.settings.good).slice(0, 5), missing, good: G.settings.good, attentionLine: G.settings.attention };
   }
-  window.Gradebook = { open, summary, _t: { num, exportWorkbook, importWorkbook, weekStartOf, catDates, setV, getV, G: () => G } };
+  // make an .xlsx from simple sheets: [{ name, rows: [[cell]], widths: [..], freeze: [col,row] }] — cells: text/number or { v, s } (s 1 = bold header)
+  function excel(sheets, filename) { download(filename, buildXlsx(sheets)); }
+  window.Gradebook = { open, summary, excel, _t: { num, exportWorkbook, importWorkbook, weekStartOf, catDates, setV, getV, G: () => G } };
 })();

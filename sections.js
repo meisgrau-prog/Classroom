@@ -112,6 +112,6 @@
     else showChooser(false);
   }
 
-  window.TeacherSections = { init, navBar, setTrail, styleOf, setStyle, suspend, showChooser,
+  window.TeacherSections = { init, navBar, setTrail, styleOf, setStyle, suspend, showChooser, openItem: k => cfg && cfg.style !== "bar" ? openItem(k, true) : cfg && cfg.open(k),
     SECTIONS: [["classroom", "Classroom Tools"], ["tools", "Teacher Tools"], ["portal", "Parent Portal Settings"]] };
 })();

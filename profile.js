@@ -66,7 +66,8 @@
         h("div", null, h("h2", null, name),
           h("div", { class: "spf-tags" },
             row.birthday ? h("span", { class: "spf-tag" }, "🎂 " + P().pretty({ type: "date", key: "birthday" }, row.birthday)) : null,
-            h("span", { class: "spf-tag " + (absent ? "red" : "green") }, absent ? "Absent today" : "Here today")))),
+            h("span", { class: "spf-tag " + (absent ? "red" : "green") }, absent ? "Absent today" : "Here today"),
+            (() => { const st = window.SeatingChart && SeatingChart.seatOf(name); return st ? h("span", { class: "spf-tag" }, `🪑 Desk ${st.desk} · ${st.chart}`) : null; })()))),
       fieldsTop.length ? h("dl", { class: "spf-contact" }, fieldsTop.map(f => [h("dt", null, f.label), h("dd", null,
         f.type === "tel" ? h("a", { href: "tel:" + row[f.key].replace(/[^0-9+]/g, "") }, row[f.key]) : f.type === "email" ? h("a", { href: "mailto:" + row[f.key] }, row[f.key]) : P().pretty(f, row[f.key]))]))
         : h("p", { class: "help" }, "No contact information yet — add it in ", h("a", { href: "#", onclick: e => { e.preventDefault(); goTool("info"); } }, "Student Info"), ".")));

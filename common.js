@@ -26,8 +26,10 @@ function applyNames(name, welcome) {
 const IS_PORTAL = /portal\.html$/.test(location.pathname);
 // Locks: the Parent Portal pages use the website password (set in the portal, can be off);
 // the teacher side (main site, Classroom Tools, Teacher Tools) uses the Teacher Portal password.
-const SIGNIN_PAGE = /(^|\/)(index\.html)?$/.test(location.pathname);
-const TEACHER_PAGE = /(^|\/)(teacher\.html|classroom\.html|teacher-tools\.html)$/.test(location.pathname);
+const SIGNIN_PAGE = !window.OFFLINE_COPY && /(^|\/)(index\.html)?$/.test(location.pathname);
+// a downloaded copy of a Teacher Area page (works with no internet — see offline.js)
+const OFFLINE_COPY = window.OFFLINE_COPY || null;
+const TEACHER_PAGE = !!OFFLINE_COPY || /(^|\/)(teacher\.html|classroom\.html|teacher-tools\.html)$/.test(location.pathname);
 const NO_LOCK = IS_PORTAL || TEACHER_PAGE || SIGNIN_PAGE;
 if (!IS_PORTAL && !SIGNIN_PAGE) document.documentElement.classList.add("gate-wait");
 
@@ -478,6 +480,7 @@ function teacherSignOut() {
 }
 async function checkTeacherLock() {
   const reveal = () => document.documentElement.classList.remove("gate-wait");
+  if (OFFLINE_COPY) return reveal();                    // a file on this computer — nothing to unlock
   const lock = await fetchTeacherLock();
   if (!lock || !lock.salt) return reveal();            // no Teacher Portal password set up yet
   let saved = null;
@@ -505,6 +508,7 @@ async function checkTeacherLock() {
 // Loads classwork / homework / news / banner (managed in the Teacher Portal).
 let contentPromise = null;
 function loadContent() {
+  if (OFFLINE_COPY) return Promise.reject(new Error("offline copy"));
   if (!contentPromise) {
     contentPromise = fetch("content.json?t=" + Date.now(), { cache: "no-store" })
       .then(res => { if (!res.ok) throw new Error("Could not load content.json"); return res.json(); })
