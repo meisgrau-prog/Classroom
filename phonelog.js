@@ -173,6 +173,7 @@
   function openForm(opts) {
     opts = opts || {};
     const base = opts.edit || {}, editing = !!opts.edit;
+    let showPast = false;
     const st = {
       student: opts.student || base.student || "",
       result: base.result || RESULTS_()[0],
@@ -260,8 +261,21 @@
           if (!confirm(`Delete this call with ${base.student}? It will be removed as if it never happened.`)) return;
           const u = snapshotUndo(`Deleted call with ${base.student}.`); S.calls = S.calls.filter(x => x !== base); save(); close(); refresh(); u();
         } }, "Delete this call") : null,
+        !editing && st.student && S.calls.some(c => c.student === st.student) ? h("button", { type: "button", class: "small-btn pl-past-btn", "aria-expanded": showPast ? "true" : "false", onclick: () => { showPast = !showPast; draw(); } }, `Edit a past call (${S.calls.filter(c => c.student === st.student).length}) ${showPast ? "▴" : "▾"}`) : null,
         h("button", { type: "button", class: "button secondary", onclick: close }, "Cancel"),
         h("button", { type: "submit", class: "button" }, "Save")));
+      if (showPast && !editing && st.student) {
+        const past = S.calls.filter(c => c.student === st.student).sort((a, b) => a.ts < b.ts ? 1 : -1);
+        form.appendChild(h("div", { class: "pl-past" }, h("p", { class: "pl-label", style: { marginTop: 0 } }, `Past calls with ${st.student}`),
+          past.map(c => h("div", { class: "pl-past-row" },
+            h("div", null, h("strong", null, fmtShort(c.ts.slice(0, 10)) + " · " + fmtTime(c.ts)), h("small", null, [c.method, c.result, c.spoke && "with " + c.spoke].filter(Boolean).join(" · ") + (c.note ? " — " + (c.note.length > 50 ? c.note.slice(0, 50) + "…" : c.note) : ""))),
+            h("span", { class: "pl-past-btns" },
+              h("button", { type: "button", class: "small-btn", onclick: () => { close(); openForm({ edit: c }); } }, "Edit"),
+              h("button", { type: "button", class: "small-btn danger", onclick: () => {
+                if (!confirm(`Delete the call with ${c.student} on ${fmtShort(c.ts.slice(0, 10))}? It will be removed as if it never happened.`)) return;
+                const u = snapshotUndo(`Deleted call with ${c.student}.`); S.calls = S.calls.filter(x => x !== c); save(); refresh(); u(); draw();
+              } }, "Delete"))))));
+      }
       form.onsubmit = e => {
         e.preventDefault();
         if (!st.student) { msg.textContent = "Choose a student."; return; }
@@ -319,7 +333,7 @@
           const u = snapshotUndo(`Follow-up for ${c.student} marked done.`);
           c.followUp.done = true; c.followUp.doneTs = nowLocal(); save(); refresh(); u();
         } }, "Done"),
-        compact ? null : h("button", { type: "button", class: "small-btn", onclick: () => openForm({ edit: c }) }, "Edit"),
+        h("button", { type: "button", class: "small-btn", onclick: () => openForm({ edit: c }) }, "Edit"),
         compact ? null : h("button", { type: "button", class: "small-btn danger", onclick: () => {
           if (!confirm(`Delete this call with ${c.student}? It will be removed as if it never happened.`)) return;
           const u = snapshotUndo(`Deleted call with ${c.student}.`); S.calls = S.calls.filter(x => x !== c); save(); refresh(); u();
@@ -641,6 +655,7 @@
     refresh();
   }
   function refresh(keepStudents) {
+    if (!tabsEl) return;
     const n = openFollowUps().filter(c => c.followUp.due && c.followUp.due <= todayStr()).length;
     const badge = tabsEl.querySelector('[data-tab="follow"] .pl-tab-badge');
     badge.textContent = n ? String(n) : ""; badge.classList.toggle("hidden", !n);
@@ -680,5 +695,8 @@
       recent: S.calls.slice().sort((a, b) => a.ts < b.ts ? 1 : -1).slice(0, 6).map(c => ({ name: c.student, ts: c.ts, result: [c.method, c.result].filter(Boolean).join(" · ") }))
     };
   }
-  window.PhoneLog = { open, summary };
+  // edit / delete a call from elsewhere (Student Profile)
+  function editCall(id) { load(); const c = S.calls.find(x => x.id === id); if (c) openForm({ edit: c }); }
+  function deleteCall(id) { load(); const c = S.calls.find(x => x.id === id); if (!c) return; S.calls = S.calls.filter(x => x !== c); save(); refresh(); }
+  window.PhoneLog = { open, summary, editCall, deleteCall };
 })();

@@ -30,12 +30,15 @@
   async function build(kind, key, withList, withRecords) {
     const css = (await get("style.css")).replace(/@import url\([^)]*\);?/g, "");
     const teacherName = (document.querySelector("[data-teacher]") || {}).textContent || (window.SITE && SITE.teacherName) || "";
-    const gradeTxt = (window.content && content.settings && content.settings.grade) || (typeof content !== "undefined" && content && content.settings && content.settings.grade) || "";
+    const gradeEl = document.querySelector("[data-grade]");
+    const gradeTxt = (typeof content !== "undefined" && content && content.settings && content.settings.grade) || (gradeEl && gradeEl.textContent.trim()) || "";
     let tools, scripts = [], title;
+    if (kind === "everything") { kind = "teacher"; key = "everything"; }
     if (kind === "teacher") {
-      tools = key === "all" ? TEACHER : TEACHER.filter(t => t[0] === key);
-      title = key === "all" ? "Teacher Tools" : tools[0][1];
-      scripts = ["classroom.js", "undo.js", "transcript.js"];
+      tools = key === "all" || key === "everything" ? TEACHER.slice() : TEACHER.filter(t => t[0] === key);
+      title = key === "everything" ? "Teacher & Classroom Tools" : key === "all" ? "Teacher Tools" : tools[0][1];
+      if (key === "everything") tools.push(["classroom", "Classroom Tools", "Classroom", []]);
+      scripts = key === "everything" ? ["timer.js", "classroom.js", "undo.js", "transcript.js"] : ["classroom.js", "undo.js", "transcript.js"];
       tools.forEach(t => t[3].forEach(f => { if (!scripts.includes(f)) scripts.push(f); }));
     } else {
       tools = key === "all" ? CLASSROOM : CLASSROOM.filter(t => t[0] === key);
@@ -108,6 +111,19 @@ ${parts.join("\n")}
 
   function settingsCard(el) {
     if (!el || el.dataset.ready) return; el.dataset.ready = "1";
+    el.appendChild(panel(true));
+  }
+  // the "⬇ Download for offline" window (Teacher Tools and Classroom Tools pages)
+  function dialog() {
+    const overlay = document.createElement("div"); overlay.className = "pl-overlay";
+    overlay.addEventListener("click", e => { if (e.target === overlay) overlay.remove(); });
+    const box = document.createElement("div"); box.className = "pl-form ol-dialog";
+    const head = document.createElement("div"); head.className = "pl-form-head";
+    head.innerHTML = '<div><small>Works without internet</small><h2>Download for offline</h2></div>';
+    const x = document.createElement("button"); x.type = "button"; x.className = "pl-x"; x.setAttribute("aria-label", "Close"); x.textContent = "×"; x.onclick = () => overlay.remove(); head.appendChild(x);
+    box.append(head, panel(false)); overlay.appendChild(box); document.body.appendChild(overlay);
+  }
+  function panel(asCard) {
     const h = (tag, attrs, ...kids) => { const e = document.createElement(tag); if (attrs) Object.entries(attrs).forEach(([k, v]) => { if (v == null || v === false) return; if (k === "class") e.className = v; else if (k.startsWith("on")) e.addEventListener(k.slice(2), v); else e.setAttribute(k, v === true ? "" : v); }); kids.flat().forEach(k => { if (k != null && k !== false) e.appendChild(typeof k === "string" ? document.createTextNode(k) : k); }); return e; };
     const list = h("input", { type: "checkbox" }); list.checked = true;
     const rec = h("input", { type: "checkbox" });
@@ -124,17 +140,27 @@ ${parts.join("\n")}
     const row = (kind, items, allLabel) => h("div", { class: "ol-row" },
       h("button", { type: "button", class: "button", onclick: e => go(kind, "all", e.currentTarget) }, allLabel),
       items.map(([k, l]) => h("button", { type: "button", class: "small-btn", onclick: e => go(kind, k, e.currentTarget) }, l)));
-    el.append(h("div", { class: "card" },
-      h("h2", { class: "section-title" }, "Use the Tools Offline"),
+    return h("div", { class: asCard ? "card" : "" },
+      asCard ? h("h2", { class: "section-title" }, "Use the Tools Offline") : null,
       h("p", { class: "help" }, "Download any tool as a single file that works with no internet — open it from your computer like a document. Pick everything in one file, or just one tool."),
+      h("div", { class: "ol-row ol-all" }, h("button", { type: "button", class: "button", onclick: e => go("everything", "everything", e.currentTarget) }, "⬇ Everything in one file (all Teacher + Classroom Tools)")),
       h("h3", { class: "sh-h" }, "Teacher Tools"), row("teacher", TEACHER.map(t => [t[0], t[1]]), "All Teacher Tools"),
       h("h3", { class: "sh-h" }, "Classroom Tools"), row("classroom", CLASSROOM, "All Classroom Tools"),
       h("h3", { class: "sh-h" }, "What to put in the file"),
       h("label", { class: "check-line" }, list, " My class list (student names)"),
       h("label", { class: "check-line" }, rec, " My records too — grades, calls, student info, support, raffle and prizes"),
       h("p", { class: "help" }, "Anyone who has the file can see what's in it, so only include records on a computer you trust. The file keeps its own copy: changes you make offline stay on that computer (use “Download backup” and “Restore backup” in a tool to move them)."),
-      msg));
+      msg);
   }
 
-  window.TeacherOffline = { build, settingsCard };
+  // a "Download for offline" button in the Back / Home bar of Teacher Tools and Classroom Tools
+  function addButton() {
+    if (!/teacher-tools\.html|classroom\.html/.test(location.pathname)) return;
+    const bar = document.querySelector(".tn-bar"); if (!bar || bar.querySelector(".ol-btn")) return;
+    const b = document.createElement("button"); b.type = "button"; b.className = "tn-btn ol-btn"; b.title = "Download these tools as a file that works without internet";
+    b.innerHTML = '<span aria-hidden="true">⬇</span><span>Download for offline</span>'; b.onclick = dialog;
+    bar.appendChild(b);
+  }
+  document.addEventListener("DOMContentLoaded", () => { addButton(); setTimeout(addButton, 500); setTimeout(addButton, 1500); });
+  window.TeacherOffline = { build, settingsCard, dialog };
 })();

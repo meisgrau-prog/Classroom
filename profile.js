@@ -85,7 +85,21 @@
     root.appendChild(card("phonelog", "Phone Log", P().callsSection(name, from, to, true)));
     root.appendChild(card("support", "Student Support", P().supportSection(name, from, to, true)));
     root.appendChild(card("info", "Student Info", P().infoSection(name)));
+    // every call and support entry can be edited or deleted right here
+    const actions = (sel, edit, del, what) => root.querySelectorAll(sel).forEach(tr => {
+      const id = tr.getAttribute(sel.slice(3, -1)); const tbl = tr.closest("table");
+      if (!tbl.querySelector("th.tp-act")) tbl.querySelector("thead tr").appendChild(h("th", { class: "tp-act" }, ""));
+      tr.appendChild(h("td", { class: "tp-act" },
+        edit ? h("button", { type: "button", class: "small-btn", onclick: () => edit(id) }, "Edit") : null,
+        h("button", { type: "button", class: "small-btn danger", onclick: () => { if (confirm(`Delete this ${what}? It will be removed as if it never happened.`)) { del(id); draw(); } } }, "Delete")));
+    });
+    const rawDel = (key, list, id) => { try { const d = JSON.parse(localStorage.getItem(key) || "{}"); d[list] = (d[list] || []).filter(x => x.id !== id); localStorage.setItem(key, JSON.stringify(d)); } catch {} };
+    actions("tr[data-call]", window.PhoneLog && PhoneLog.editCall, id => window.PhoneLog ? PhoneLog.deleteCall(id) : rawDel("teacher_phone_log_v1", "calls", id), "call");
+    actions("tr[data-support]", window.StudentSupport && StudentSupport.editEntry, id => window.StudentSupport ? StudentSupport.deleteEntry(id) : rawDel("teacher_support_v1", "entries", id), "entry");
   }
+  // redraw after a change made in an edit window
+  let redrawT = null;
+  window.addEventListener("teacher-undo-changed", () => { if (root && root.offsetParent !== null) { clearTimeout(redrawT); redrawT = setTimeout(draw, 150); } });
 
   window.StudentProfile = { open, refresh: () => root && draw() };
 })();

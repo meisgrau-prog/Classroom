@@ -767,6 +767,7 @@
             h("button", { type: "button", "aria-label": "One less " + p.name, onclick: step(-1) }, "−"),
             h("strong", null, String(p.qty)),
             h("button", { type: "button", "aria-label": "One more " + p.name, onclick: step(1) }, "+")),
+          h("button", { type: "button", class: "rf-x rf-edit", "aria-label": "Rename " + p.name, title: "Rename", onclick: () => { const v = prompt("Change the prize name:", p.name); if (v && v.trim()) { p.name = v.trim(); saveP(); drawList(); } } }, "✎"),
           h("button", { type: "button", class: "rf-x", "aria-label": "Remove " + p.name, onclick: () => { P.prizes.splice(i, 1); saveP(); drawList(); } }, "×")));
       });
     }
@@ -782,6 +783,8 @@
       Array.from({ length: 12 }, (_, k) => h("option", { value: String(k + 1) }, String(k + 1))));
     countSel.value = String(boxCount());
     countSel.addEventListener("change", () => { P.count = +countSel.value; saveP(); if (left() || P.showEmpty !== false) newRound(); else drawBoxes(); });
+    const keepChk = h("input", { type: "checkbox" }); keepChk.checked = !!P.keep;
+    keepChk.addEventListener("change", () => { P.keep = keepChk.checked; saveP(); });
     const emptyChk = h("input", { type: "checkbox" }); emptyChk.checked = P.showEmpty !== false;
     emptyChk.addEventListener("change", () => { P.showEmpty = emptyChk.checked; saveP(); if (P.opened < 0 && P.boxes.length) newRound(); });
     function newRound() {
@@ -825,7 +828,7 @@
       P.opened = i;
       if (!name) { saveP(); drawBoxes(); stageMsg.textContent = "Empty box — better luck next time!"; return; }
       const p = P.prizes.find(x => x.name === name);
-      if (p) { p.qty -= 1; if (p.qty < 1) P.prizes.splice(P.prizes.indexOf(p), 1); }
+      if (p && !P.keep) { p.qty -= 1; if (p.qty < 1) P.prizes.splice(P.prizes.indexOf(p), 1); }   // "keep on the list" leaves it for next time
       P.given.push({ name, box: i + 1 });
       saveP(); drawBoxes(); drawList(); drawGiven();
       Confetti.burst(canvas);
@@ -844,7 +847,7 @@
     const el = h("div", { class: "cr-view hidden" },
       h("div", { class: "card" },
         h("h2", { class: "section-title" }, "Prizes"),
-        h("p", { class: "help" }, "Add each prize and how many you have. Every time a box is opened, that prize is taken off the list."),
+        h("p", { class: "help" }, "Add each prize and how many you have. Every time a box is opened, that prize is taken off the list — unless “Keep picked prizes on the list” is ticked below the boxes."),
         h("div", { class: "rf-form" }, nameIn, h("span", { class: "rf-times" }, "×"), qtyIn, quick,
           h("button", { type: "button", class: "button", onclick: addFromForm }, "Add prize")),
         formMsg,
@@ -864,6 +867,7 @@
         h("div", { class: "rf-options pz-settings" },
           h("label", { class: "check-line", style: "margin:0" }, "Number of boxes ", countSel),
           h("label", { class: "check-line", style: "margin:0" }, emptyChk, " Show empty boxes when prizes run out"),
+          h("label", { class: "check-line", style: "margin:0", title: "Picked prizes stay on your list, so you can use the same list again and again" }, keepChk, " Keep picked prizes on the list (reuse the same list)"),
           h("label", { class: "check-line", style: "margin:0" }, soundChk, " Sound"))),
       h("div", { class: "card" },
         h("div", { class: "cr-row" }, h("h2", { class: "section-title", style: "margin:0" }, "Prizes Given Out"),
@@ -925,6 +929,7 @@
             h("button", { type: "button", "aria-label": "One less ticket for " + e.name, onclick: step(-1) }, "−"),
             h("strong", null, String(e.tickets)),
             h("button", { type: "button", "aria-label": "One more ticket for " + e.name, onclick: step(1) }, "+")),
+          h("button", { type: "button", class: "rf-x rf-edit", "aria-label": "Rename " + e.name, title: "Rename", onclick: () => { const v = prompt("Change the name:", e.name); if (v && v.trim()) { e.name = v.trim(); saveR(); drawEntries(); } } }, "✎"),
           h("button", { type: "button", class: "rf-x", "aria-label": "Remove " + e.name, onclick: () => { R.entries.splice(i, 1); saveR(); drawEntries(); } }, "×")));
       });
     }

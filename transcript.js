@@ -116,7 +116,7 @@
   }
   function callsSection(name, from, to, notes) {
     const { calls, label } = callsData(name, from, to);
-    const rows = calls.map(c => h("tr", null,
+    const rows = calls.map(c => h("tr", { "data-call": c.id },
       h("td", { class: "tp-date" }, fmtDate(c.ts), h("small", null, fmtTime(c.ts))),
       h("td", null, c.method || "—", h("small", null, c.result || "")),
       h("td", null, c.spoke || "—"),
@@ -136,7 +136,7 @@
     const worked = list.filter(e => e.outcome === "worked");
     const kids = [];
     if (worked.length) kids.push(h("div", { class: "tp-callout" }, h("b", null, "What has worked: "), worked.map(e => e.text).join(" · ")));
-    kids.push(table(["Date", "Status", "What was done", "Area", "Result", notes ? "Notes" : null].filter(Boolean), list.map(e => h("tr", null,
+    kids.push(table(["Date", "Status", "What was done", "Area", "Result", notes ? "Notes" : null].filter(Boolean), list.map(e => h("tr", { "data-support": e.id },
       h("td", { class: "tp-date" }, fmtDate(e.date)),
       h("td", null, e.kind === "plan" ? "Planned" : "Done"),
       h("td", null, e.text),

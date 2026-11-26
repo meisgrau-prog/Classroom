@@ -2471,3 +2471,22 @@ html.hp-wait .hp-card > *, html.hp-wait .hp-hero > *, html.hp-wait .hp-foot { vi
 .spf-range .pl-dt, .tp-dates .pl-dt { display: inline-block; width: auto !important; min-width: 150px; margin: 0 !important; }
 .spf-bar .spf-range { flex: 0 1 auto; }
 .pl-actions .pl-del { margin-right: auto; }
+
+/* Edit / delete everywhere */
+.pl-actions { flex-wrap: wrap; }
+.pl-past-btn { margin-right: auto; }
+.pl-past { margin-top: 14px; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: #fbf7ef; }
+.pl-past-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 4px; border-top: 1px solid #ece5d7; }
+.pl-past-row:first-of-type { border-top: 0; }
+.pl-past-row strong { display: block; color: var(--navy); font-size: .92rem; }
+.pl-past-row small { color: var(--muted); font-size: .82rem; }
+.pl-past-btns { display: flex; gap: 6px; flex: none; }
+.tp-act { white-space: nowrap; text-align: right; width: 1%; }
+.tp-act .small-btn { padding: 3px 10px; margin-left: 4px; }
+@media print { .tp-act { display: none !important; } }
+.rf-edit { font-size: .95rem; }
+.ol-btn { margin-left: auto; background: linear-gradient(180deg, #e2c58f, #c9a96a); border-color: #c9a96a; color: var(--navy); }
+.ol-btn:hover { filter: brightness(1.05); }
+.ol-dialog { width: min(760px, 100%); }
+.ol-all { margin: 4px 0 6px; }
+@media (max-width: 600px) { .ol-btn span:last-child { display: none; } .ol-btn { margin-left: 0; } }

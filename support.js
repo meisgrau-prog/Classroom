@@ -140,11 +140,12 @@
       h("p", { class: "pl-label" }, "Area"), areaRow,
       h("p", { class: "pl-label" }, "Date"), date,
       h("div", { class: "pl-actions" },
+        h("button", { type: "button", class: "small-btn danger pl-del", onclick: () => { if (!confirm("Delete this entry? It will be removed as if it never happened.")) return; S.entries = S.entries.filter(x => x !== e); save(); overlay.remove(); if (main) { drawSide(); drawMain(); } } }, "Delete this entry"),
         h("button", { type: "button", class: "button secondary", onclick: () => overlay.remove() }, "Cancel"),
         h("button", { type: "button", class: "button", onclick: () => {
           if (!text.value.trim()) return;
           e.text = text.value.trim(); e.date = date.value || e.date; e.kind = kind.value; e.areas = [...areas];
-          save(); overlay.remove(); drawSide(); drawMain();
+          save(); overlay.remove(); if (main) { drawSide(); drawMain(); }
         } }, "Save"))));
     document.body.appendChild(overlay);
     text.focus();
@@ -242,5 +243,7 @@
     return { plans: S.entries.filter(e => e.kind === "plan").sort((a, b) => a.date < b.date ? -1 : 1).map(e => ({ name: e.student, text: e.text, date: e.date })) };
   }
 
-  window.StudentSupport = { open, summary };
+  function editById(id) { load(); const e = S.entries.find(x => x.id === id); if (e) editEntry(e); }
+  function deleteById(id) { load(); S.entries = S.entries.filter(x => x.id !== id); save(); if (main) { drawSide(); drawMain(); } }
+  window.StudentSupport = { open, summary, editEntry: editById, deleteEntry: deleteById };
 })();
