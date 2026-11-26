@@ -69,15 +69,17 @@
       doc.querySelectorAll(".tt-switch button").forEach(b => { if (b.dataset.tool !== key) b.remove(); else b.setAttribute("aria-selected", "true"); });
       doc.querySelectorAll(".ts-main > section").forEach(s => { if (s.id !== key) s.remove(); else s.classList.remove("hidden"); });
     }
-    // everything: Classroom Tools becomes one more tab on the Teacher Tools page
+    // the page becomes one "view"; Classroom Tools (everything) and Settings are views too — the side menu switches them
+    const main = doc.querySelector(".ts-main");
+    const mainView = doc.createElement("div"); mainView.className = "ol-view"; mainView.dataset.view = "main";
+    while (main.firstChild) mainView.appendChild(main.firstChild);
+    main.appendChild(mainView);
     if (everything) {
-      const link = doc.querySelector('.ts-nav a[href="classroom.html"]'), sw = doc.querySelector(".tt-switch");
-      const b = doc.createElement("button"); b.type = "button"; b.dataset.tool = "classroom"; b.setAttribute("aria-selected", "false");
-      b.innerHTML = (link ? link.querySelector("svg").outerHTML : "") + "Classroom Tools";
-      sw.insertBefore(b, sw.querySelector(".tt-glider"));
-      const sec = doc.createElement("section"); sec.id = "classroom"; sec.className = "hidden";
-      const secs = doc.querySelectorAll(".ts-main > section"); secs[secs.length - 1].after(sec);
+      const v = doc.createElement("div"); v.className = "ol-view"; v.dataset.view = "classroom"; v.hidden = true;
+      v.innerHTML = '<section id="classroom"></section><p class="tools-note">Your student lists, raffle tickets and prizes are saved only in this browser on this computer.</p>';
+      main.appendChild(v);
     }
+    const setView = doc.createElement("div"); setView.className = "ol-view"; setView.dataset.view = "settings"; setView.hidden = true; main.appendChild(setView);
 
     // styles (with the fonts) inside the file
     let css = await get("style.css");
@@ -130,32 +132,20 @@
       brandLink.querySelector("small").after(tag);
     }
     style.textContent += "\n.ts-offline { display: inline-block; margin-top: 6px; padding: 2px 10px; border-radius: 999px; background: #c9a96a; color: #14213d; font: 700 .7rem var(--sans, sans-serif); letter-spacing: 1.5px; text-transform: uppercase; }";
-    // leave out menu items that are only on the website
-    const inFile = new Set([page].concat(everything ? ["classroom.html"] : []));
-    doc.querySelectorAll(".ts-nav .ts-item").forEach(a => { if (!inFile.has((a.getAttribute("href") || "").split("#")[0])) a.remove(); });
+    // side menu: only the pages in this file, then Settings
+    const navEl = doc.querySelector(".ts-nav");
+    const setItem = navEl.querySelector('[data-nav="settings"]');
+    navEl.querySelectorAll(".ts-item").forEach(a => {
+      const p = (a.getAttribute("href") || "").split("#")[0];
+      if (p === page) a.dataset.view = "main";
+      else if (everything && p === "classroom.html") { a.dataset.view = "classroom"; a.classList.remove("active"); a.removeAttribute("aria-current"); }
+      else if (a !== setItem) a.remove();
+    });
+    if (setItem) { setItem.setAttribute("href", "#settings"); setItem.dataset.view = "settings"; setItem.removeAttribute("data-nav"); navEl.appendChild(setItem); }
 
     // links: pages in this file stay here; everything else opens the website
     const out = doc.getElementById("ts-signout"); if (out) out.style.display = "none";   // nothing to sign out of in a file
-    const nav = doc.createElement("script");
-    nav.textContent = `(function () {
-  const SITE_URL = OFFLINE_COPY.site, KIND = OFFLINE_COPY.page;
-  const here = { "teacher-tools.html": KIND === "teacher", "classroom.html": KIND === "classroom" || !!document.querySelector('.tt-switch [data-tool="classroom"]') };
-  function go(page) {
-    if (page === "classroom.html" && KIND === "teacher") { TeacherSections.openItem("classroom"); return; }
-    if (page === "teacher-tools.html" && KIND === "teacher") { const first = document.querySelector(".tt-switch button"); TeacherSections.styleOf("tools") === "bar" ? first.click() : TeacherSections.showChooser(); return; }
-    if (page === "classroom.html") { if (TeacherSections.styleOf("classroom") !== "bar") TeacherSections.showChooser(); else window.scrollTo({ top: 0 }); }
-  }
-  document.addEventListener("click", e => {
-    const a = e.target.closest && e.target.closest("a[href]"); if (!a) return;
-    const href = a.getAttribute("href"); if (!href || /^(#|blob:|data:|https?:|mailto:|tel:)/.test(href)) return;
-    e.preventDefault();
-    const page = href.split("#")[0];
-    if (here[page]) return go(page);
-    if (a.classList.contains("tn-home")) return go(KIND === "teacher" ? "teacher-tools.html" : "classroom.html");   // Home: the start of this file
-    window.open(SITE_URL + href, "_blank", "noopener");                                                           // the rest of the Teacher Area is on the website
-  }, true);
-})();`;
-    doc.body.appendChild(nav);
+    for (const f of ["backup.js", "offline-page.js"]) { const s = doc.createElement("script"); s.textContent = `/* ${f} */\n` + safe(await get(f)); doc.body.appendChild(s); }
 
     const html = "<!doctype html>\n" + doc.documentElement.outerHTML;
     return { html, name: `${title} - offline.html`, size: html.length };

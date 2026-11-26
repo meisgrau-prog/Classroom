@@ -20,8 +20,25 @@
   const clampX = x => Math.max(0, Math.min(RW - DW, x)), clampY = y => Math.max(84, Math.min(RH - DH, y));
 
   /* ---------- layouts ---------- */
-  const PRESETS = [["rows", "Rows"], ["pairs", "Pairs"], ["groups", "Groups of 4"], ["u", "U-shape"], ["horseshoe", "Two U's"]];
-  function preset(c, kind, n) {
+  const PRESETS = [["rows", "Rows"], ["pairs", "Pairs"], ["u", "U-shape"], ["horseshoe", "Two U's"]];
+  // group sizes: n desks in groups of `size` as even as can be (13 in 4s → 4, 3, 3, 3)
+  function evenSizes(n, size) { const g = Math.max(1, Math.ceil(n / size)), base = Math.floor(n / g), extra = n % g; return Array.from({ length: g }, (_, i) => base + (i < extra ? 1 : 0)); }
+  function parseSizes(txt) { return String(txt || "").split(/[^0-9]+/).map(Number).filter(x => x > 0 && x <= 12); }
+  // one group of s desks pushed together: two rows facing each other (1–2 desks: one row)
+  function cluster(s) { const cols = s <= 2 ? s : Math.ceil(s / 2), rows = s <= 2 ? 1 : 2; return { w: cols * DW, h: rows * DH, spots: Array.from({ length: s }, (_, i) => ({ x: (i % cols) * DW, y: Math.floor(i / cols) * DH })) }; }
+  function groupLayout(sizes, top) {
+    const cl = sizes.map(cluster), lines = [[]]; let w = 0;
+    cl.forEach(g => { const line = lines[lines.length - 1]; if (line.length && w + g.w + 40 * (line.length + 1) > RW - 40) { lines.push([g]); w = g.w; } else { line.push(g); w += g.w; } });
+    const totalH = lines.reduce((a, l) => a + Math.max(...l.map(g => g.h)), 0), gy = Math.min(70, Math.max(18, (RH - top - 10 - totalH) / Math.max(1, lines.length))), out = [];
+    let y = top;
+    lines.forEach(l => {
+      const sw = l.reduce((a, g) => a + g.w, 0), gx = (RW - sw) / (l.length + 1); let x = gx;
+      l.forEach(g => { g.spots.forEach(p => out.push([x + p.x, y + p.y])); x += g.w + gx; });
+      y += Math.max(...l.map(g => g.h)) + gy;
+    });
+    return out;
+  }
+  function preset(c, kind, n, sizes) {
     n = n || Math.max(students().length, 12);
     const desks = [], add = (x, y, rot) => desks.push({ id: uid(), x: snap(clampX(x)), y: snap(clampY(y)), rot: rot || 0 });
     const top = 110;
@@ -34,9 +51,7 @@
       const pw = DW * 2, gx = (RW - cols * pw) / (cols + 1), gy = Math.min(44, (RH - top - rows * DH) / (rows + 0.5));
       for (let i = 0; i < n; i++) { const p = Math.floor(i / 2), r = Math.floor(p / cols), k = p % cols; add(gx + k * (pw + gx) + (i % 2) * DW, top + r * (DH + gy)); }
     } else if (kind === "groups") {
-      const groups = Math.ceil(n / 4), cols = Math.min(4, Math.max(2, Math.ceil(Math.sqrt(groups * 1.5)))), rows = Math.ceil(groups / cols);
-      const gw = DW * 2, gh = DH * 2, gx = (RW - cols * gw) / (cols + 1), gy = Math.max(20, (RH - top - rows * gh) / (rows + 0.5));
-      for (let i = 0; i < n; i++) { const g = Math.floor(i / 4), r = Math.floor(g / cols), k = g % cols, s = i % 4; add(gx + k * (gw + gx) + (s % 2) * DW, top + r * (gh + gy) + Math.floor(s / 2) * DH); }
+      groupLayout(sizes && sizes.length ? sizes : evenSizes(n, 4), top).forEach(([x, y]) => add(x, y));
     } else if (kind === "u" || kind === "horseshoe") {
       const shape = (x0, w, y0, h, count) => {      // left side, back, right side
         const side = Math.max(1, Math.round(count * h / (2 * h + w))), back = Math.max(1, count - side * 2);
@@ -74,12 +89,20 @@
     const c = chart(); root.innerHTML = "";
     root.appendChild(h("div", { class: "card cr-head" }, h("h1", { class: "page-title" }, "Seating Chart"),
       h("p", { class: "help", style: { margin: 0 } }, "Set up the room, then drag students into desks. Saved only on this device.")));
-    // chart picker
-    const pick = h("select", { class: "pl-select", "aria-label": "Seating chart", onchange: e => { S.current = e.target.value; save(); selDesk = null; draw(); } }, S.charts.map(x => h("option", { value: x.id, selected: x.id === c.id ? true : null }, x.name)));
+    // one tab per saved chart — click to switch; double-click to rename
+    const go = id => { if (id === S.current) return; S.current = id; save(); selDesk = null; pickName = null; draw(); };
+    const addChart = () => { const n = prompt("Name for the new chart (e.g. “Gemara groups” or “Test seating”):", "Chart " + (S.charts.length + 1)); if (!n) return; const x = newChart(n.trim() || "New chart"); preset(x, "rows"); S.charts.push(x); S.current = x.id; save(); draw(); };
+    const saveCopy = () => { const n = prompt("Save this chart as a new chart named:", c.name + " (copy)"); if (!n) return; const x = JSON.parse(JSON.stringify(c)); x.id = uid(); x.name = n.trim() || c.name + " (copy)"; const map = {}; x.desks.forEach(d => { const o = d.id; d.id = uid(); map[o] = d.id; }); x.seats = Object.fromEntries(Object.entries(c.seats).map(([k, v]) => [map[k], v])); S.charts.push(x); S.current = x.id; save(); draw(); };
+    const moveTab = d => { const i = S.charts.indexOf(c), j = i + d; if (j < 0 || j >= S.charts.length) return; [S.charts[i], S.charts[j]] = [S.charts[j], S.charts[i]]; save(); draw(); };
+    root.appendChild(h("nav", { class: "sc-tabs", role: "tablist", "aria-label": "Seating charts" },
+      S.charts.map(x => { const n = Object.keys(x.seats).length; return h("button", { type: "button", role: "tab", class: "sc-tab", "aria-selected": x.id === c.id ? "true" : "false", title: x.id === c.id ? "Double-click to rename" : "Open this chart", onclick: () => go(x.id), ondblclick: () => { const v = prompt("Rename this chart:", x.name); if (v && v.trim()) { x.name = v.trim(); save(); draw(); } } },
+        h("span", { class: "sc-tab-name" }, x.name), h("small", null, `${n} seated · ${x.desks.length} desks`)); }),
+      h("button", { type: "button", class: "sc-tab sc-tab-add", onclick: addChart, title: "Make another seating chart" }, "+ New chart")));
     root.appendChild(h("div", { class: "card sc-bar" },
-      h("div", { class: "sc-charts" }, h("span", { class: "sc-l" }, "Chart"), pick,
-        h("button", { type: "button", class: "small-btn", onclick: () => { const n = prompt("Name for the new chart:", "New chart"); if (!n) return; const x = newChart(n.trim()); preset(x, "rows"); S.charts.push(x); S.current = x.id; save(); draw(); } }, "+ New"),
-        h("button", { type: "button", class: "small-btn", onclick: () => { const x = JSON.parse(JSON.stringify(c)); x.id = uid(); x.name = c.name + " (copy)"; const map = {}; x.desks.forEach(d => { const o = d.id; d.id = uid(); map[o] = d.id; }); x.seats = Object.fromEntries(Object.entries(c.seats).map(([k, v]) => [map[k], v])); S.charts.push(x); S.current = x.id; save(); draw(); } }, "Copy"),
+      h("div", { class: "sc-charts" }, h("strong", { class: "sc-cur" }, c.name), h("span", { class: "sc-saved" }, "✓ Saved"),
+        h("button", { type: "button", class: "small-btn", onclick: saveCopy, title: "Keep this chart as it is and save a copy you can change" }, "💾 Save as a new chart"),
+        S.charts.length > 1 ? [h("button", { type: "button", class: "small-btn", "aria-label": "Move tab left", disabled: S.charts[0] === c ? true : null, onclick: () => moveTab(-1) }, "‹"),
+          h("button", { type: "button", class: "small-btn", "aria-label": "Move tab right", disabled: S.charts[S.charts.length - 1] === c ? true : null, onclick: () => moveTab(1) }, "›")] : null,
         h("button", { type: "button", class: "small-btn", onclick: () => { const n = prompt("Rename this chart:", c.name); if (n) { c.name = n.trim() || c.name; save(); draw(); } } }, "Rename"),
         S.charts.length > 1 ? h("button", { type: "button", class: "small-btn danger", onclick: () => { if (!confirm(`Delete the chart “${c.name}”?`)) return; S.charts = S.charts.filter(x => x !== c); S.current = S.charts[0].id; save(); draw(); } }, "Delete") : null),
       h("div", { class: "pl-seg sc-mode" },
@@ -91,7 +114,7 @@
       const count = h("input", { type: "number", class: "cr-num", min: "1", max: "60", value: String(Math.max(students().length, c.desks.length || 12)), "aria-label": "Number of desks" });
       tools.append(...[h("span", { class: "sc-l" }, "Start from"), PRESETS.map(([k, l]) => h("button", { type: "button", class: "small-btn", onclick: () => { if (c.desks.length && !confirm("Replace the desks with this layout? Seated students are kept in order.")) return; preset(c, k, +count.value || 12); save(); draw(); } }, l)),
         h("label", { class: "sc-count" }, count, " desks"),
-        h("span", { class: "sc-sep" }),
+        groupsControl(c, count),
         h("button", { type: "button", class: "small-btn", onclick: () => { const d = { id: uid(), x: snap(RW / 2 - DW / 2), y: snap(RH - DH - 30), rot: 0 }; c.desks.push(d); selDesk = d.id; save(); draw(); } }, "+ Add desk"),
         selDesk ? [h("button", { type: "button", class: "small-btn", onclick: () => rotate(c, 90) }, "↻ Turn"),
           h("button", { type: "button", class: "small-btn", onclick: () => { const d = c.desks.find(x => x.id === selDesk); if (!d) return; const n = { id: uid(), x: snap(clampX(d.x + DW + 8)), y: d.y, rot: d.rot }; c.desks.push(n); selDesk = n.id; save(); draw(); } }, "⧉ Copy desk"),
@@ -219,6 +242,33 @@
     window.addEventListener("afterprint", done); setTimeout(() => window.print(), 50);
   }
 
+  // Groups: all the same size, or mixed sizes typed in (e.g. 4, 4, 3, 5) — and add one more group
+  let gSize = "4", gMixed = "";
+  function groupsControl(c, count) {
+    const mixed = h("input", { type: "text", class: "pl-dt sc-mixed" + (gSize === "mixed" ? "" : " hidden"), value: gMixed, placeholder: "e.g. 4, 4, 3, 5, 2", "aria-label": "Group sizes", oninput: e => { gMixed = e.target.value; note(); } });
+    const info = h("span", { class: "help sc-ginfo" });
+    const sizesNow = () => gSize === "mixed" ? parseSizes(gMixed) : evenSizes(+count.value || 12, +gSize);
+    const note = () => { const z = sizesNow(); info.textContent = z.length ? `${z.length} group${z.length === 1 ? "" : "s"}: ${z.join(", ")} (${z.reduce((a, b) => a + b, 0)} desks)` : "Type the size of each group."; };
+    const sel = h("select", { class: "pl-select sc-gsize", "aria-label": "Group size", onchange: e => { gSize = e.target.value; mixed.classList.toggle("hidden", gSize !== "mixed"); if (gSize === "mixed") mixed.focus(); note(); } },
+      ["2", "3", "4", "5", "6", "8"].map(v => h("option", { value: v, selected: gSize === v ? true : null }, "Groups of " + v)),
+      h("option", { value: "mixed", selected: gSize === "mixed" ? true : null }, "Mixed sizes…"));
+    count.addEventListener("input", note); note();
+    const make = () => {
+      const z = sizesNow(); if (!z.length) { mixed.focus(); return; }
+      if (c.desks.length && !confirm("Replace the desks with these groups? Seated students are kept in order.")) return;
+      preset(c, "groups", z.reduce((a, b) => a + b, 0), z); save(); draw();
+    };
+    const addOne = () => {
+      const s = gSize === "mixed" ? (parseSizes(gMixed)[0] || 4) : +gSize, g = cluster(s);
+      // the lowest open spot in the room
+      const maxY = c.desks.reduce((m, d) => Math.max(m, d.y + DH), 100), y = maxY + DH + 20 <= RH ? maxY + 20 : RH - g.h - 10, x = (RW - g.w) / 2;
+      let last = null; g.spots.forEach(p => { last = { id: uid(), x: snap(clampX(x + p.x)), y: snap(clampY(y + p.y)), rot: 0 }; c.desks.push(last); });
+      selDesk = null; save(); draw(); if (msgEl) msgEl.textContent = `Added a group of ${s}. Drag the desks where you want them.`;
+    };
+    return h("span", { class: "sc-groups" }, h("span", { class: "sc-l" }, "Groups"), sel, mixed,
+      h("button", { type: "button", class: "small-btn", onclick: make }, "Make groups"),
+      h("button", { type: "button", class: "small-btn", onclick: addOne, title: "Add one more group to the room without changing the other desks" }, "+ Add a group"), info);
+  }
   // download the chart as an Excel sheet: the room laid out in cells + a list
   function excel(c) {
     if (!window.Gradebook || !Gradebook.excel) { alert("The Excel maker isn't loaded on this page."); return; }

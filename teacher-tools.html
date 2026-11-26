@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
   <title>Teacher Tools – Rabbi Eisgrau</title>
-  <link rel="stylesheet" href="style.css?v=20261257">
-  <script src="data.js?v=20261257"></script>
-  <script src="common.js?v=20261257"></script>
-  <script src="sync.js?v=20261257"></script>
-  <script src="undo.js?v=20261257"></script>
-  <script src="sections.js?v=20261257"></script>
-  <script src="offline.js?v=20261257"></script>
+  <link rel="stylesheet" href="style.css?v=20261261">
+  <script src="data.js?v=20261261"></script>
+  <script src="common.js?v=20261261"></script>
+  <script src="sync.js?v=20261261"></script>
+  <script src="undo.js?v=20261261"></script>
+  <script src="sections.js?v=20261261"></script>
+  <script src="offline.js?v=20261261"></script>
 </head>
 <body class="portal tshell" data-page="tools">
   <aside class="ts-side">
@@ -40,22 +40,22 @@
     <section id="support" class="hidden"></section>
     <section id="pdfjoin" class="hidden"></section>
   </div>
-  <script src="phonelog.js?v=20261257"></script>
-  <script src="gradebook.js?v=20261257"></script>
-  <script src="classroom.js?v=20261257"></script>
-  <script src="studentinfo.js?v=20261257"></script>
-  <script src="support.js?v=20261257"></script>
-  <script src="pdfjoin.js?v=20261257"></script>
-  <script src="transcript.js?v=20261257"></script>
-  <script src="attendance.js?v=20261257"></script>
-  <script src="seating.js?v=20261257"></script>
-  <script src="profile.js?v=20261257"></script>
+  <script src="phonelog.js?v=20261261"></script>
+  <script src="gradebook.js?v=20261261"></script>
+  <script src="classroom.js?v=20261261"></script>
+  <script src="studentinfo.js?v=20261261"></script>
+  <script src="support.js?v=20261261"></script>
+  <script src="pdfjoin.js?v=20261261"></script>
+  <script src="transcript.js?v=20261261"></script>
+  <script src="attendance.js?v=20261261"></script>
+  <script src="seating.js?v=20261261"></script>
+  <script src="profile.js?v=20261261"></script>
   <script>
     // the tools on this page (an offline copy may have fewer)
     const TOOLS = [...document.querySelectorAll(".tt-switch button")].map(b => b.dataset.tool);
     const HOME_TOOL = TOOLS.includes("phonelog") ? "phonelog" : TOOLS[0];
     if (TOOLS.includes("phonelog")) PhoneLog.open(document.getElementById("phonelog"));
-    let gbOpen = false, crOpen = false;
+    let gbOpen = false;
     let tmOpen = false;
     let pjOpen = false;
     // gold highlight that slides to the chosen tool
@@ -82,7 +82,6 @@
       if (name === "seating") SeatingChart.open(document.getElementById("seating"));
       if (name === "pdfjoin" && !pjOpen) { PdfJoiner.open(document.getElementById("pdfjoin")); pjOpen = true; }
       if (name === "gradebook" && !gbOpen) { Gradebook.open(document.getElementById("gradebook")); gbOpen = true; }
-      if (name === "classroom" && !crOpen) { Classroom.open(document.getElementById("classroom")); crOpen = true; }
       try { localStorage.setItem("teacher_tools_last", name); } catch {}
       moveGlider(animate);
       const lb = document.querySelector(`.tt-switch [data-tool="${name}"]`);

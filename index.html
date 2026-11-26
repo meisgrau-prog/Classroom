@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Sign In – Rabbi Eisgrau</title>
-  <link rel="stylesheet" href="style.css?v=20261257">
-  <script src="data.js?v=20261257"></script>
-  <script src="common.js?v=20261257"></script>
+  <link rel="stylesheet" href="style.css?v=20261261">
+  <script src="data.js?v=20261261"></script>
+  <script src="common.js?v=20261261"></script>
   <script>document.documentElement.classList.add("hp-wait"); setTimeout(() => document.documentElement.classList.remove("hp-wait"), 4000);</script>
 </head>
 <body class="landing-body" data-page="signin">
@@ -80,7 +80,7 @@
       </section>
       <form class="hp-card" id="signin-form" autocomplete="on">
         <h2>Sign in</h2>
-        <div class="hp-tabs" role="tablist" aria-label="I am a">
+        <div class="hp-tabs hidden" role="tablist" aria-label="I am a">
           <button type="button" role="tab" class="hp-tab" data-role="parent" aria-selected="true">Parent</button>
           <button type="button" role="tab" class="hp-tab" data-role="teacher" aria-selected="false">Teacher</button>
         </div>
@@ -157,10 +157,11 @@
           : open ? "The Parent Portal is open — no password needed."
           : profiles ? "Sign in with your email and password." : "Enter the class password.";
         $("si-msg").textContent = "";
-        // With parent profiles there's no Parent/Teacher switch: parents just sign in,
-        // and a small link at the bottom opens the teacher sign-in.
-        document.querySelector(".hp-tabs").classList.toggle("hidden", profiles);
-        $("si-role-link").classList.toggle("hidden", !profiles);
+        // No Parent/Teacher switch. With a class password there's one box — the teacher's
+        // password works there too. With parent profiles (email + password) or an open
+        // Parent Portal, a small link at the bottom opens the teacher sign-in.
+        document.querySelector(".hp-tabs").classList.add("hidden");
+        $("si-role-link").classList.toggle("hidden", !(profiles || open));
         $("si-role-link").textContent = parent ? "Teacher sign-in" : "← Back to parent sign-in";
         $("si-email").placeholder = "Email";
         (parent && profiles ? $("si-email") : $("si-pass")).focus();

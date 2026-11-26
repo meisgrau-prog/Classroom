@@ -1495,8 +1495,11 @@ html.gate-wait body > :not(.site-gate) { visibility: hidden; }
 
 /* ================= Teacher Area shell (side menu) ================= */
 body.tshell { display: grid; grid-template-columns: 260px minmax(0, 1fr); align-items: start; height: auto; min-height: 100vh;
-  /* navy ribbon painted down the whole left side, however long the page is */
-  background: linear-gradient(90deg, #14213d 0, #0f1830 260px, var(--cream) 260px) fixed, var(--cream); }
+  position: relative; background: var(--cream); }
+/* navy ribbon down the whole left side, however long the page is (also in full-page pictures and offline files) */
+body.tshell::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 260px; z-index: 0; pointer-events: none;
+  background: linear-gradient(180deg, #14213d 0, #0f1830 100vh, #0f1830 100%); border-right: 1px solid rgba(201,169,106,.35); }
+body.tshell > .ts-side { z-index: 1; }
 html:has(body.tshell) { height: auto; }
 .ts-side {
   position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; gap: 6px;
@@ -1551,6 +1554,7 @@ html:has(body.tshell) { height: auto; }
 .ts-card small { color: var(--muted); }
 @media (max-width: 860px) {
   body.tshell { grid-template-columns: 1fr; background: var(--cream); }
+  body.tshell::before { display: none; }
   .ts-side { position: sticky; top: 0; z-index: 30; height: auto; flex-direction: row; align-items: center; padding: 8px 10px; overflow-x: auto; gap: 4px; border-right: 0; border-bottom: 2px solid var(--gold); scrollbar-width: none; }
   .ts-side::-webkit-scrollbar { display: none; }
   .ts-brand { padding: 0 6px 0 0; margin: 0; border: 0; }
@@ -1779,6 +1783,7 @@ html:has(body.tshell) { height: auto; }
 .gb-print-title { display: none; }
 @media print {
   body.tshell { display: block; background: #fff !important; }
+  body.tshell::before { display: none !important; }
   .tshell .ts-side, .tshell .tt-switch, .tshell .pl-tabs, .tshell .savebar { display: none !important; }
   .tshell .ts-main { padding: 0; min-height: 0; }
   #gradebook .pl-bar, #gradebook .pl-actions, #gradebook .gb-toolbar, #gradebook .pl-empty button { display: none !important; }
@@ -2591,3 +2596,20 @@ button.gb-tile:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba
 /* Gradebook copy buttons */
 .gb-copy { display: inline-flex; gap: 6px; flex-wrap: wrap; }
 .gb-grid .gb-avg { user-select: text; }
+
+/* seating chart tabs */
+.sc-tabs { display: flex; gap: 6px; align-items: stretch; overflow-x: auto; padding: 6px; margin: 0 0 14px; background: var(--navy, #14213d); border-radius: 16px; scrollbar-width: thin; }
+.sc-tab { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 9px 16px; border: 0; border-radius: 11px; background: none; color: #d9d0bd; font: 600 .95rem var(--sans, sans-serif); cursor: pointer; text-align: left; max-width: 240px; }
+.sc-tab small { font-weight: 500; font-size: .72rem; opacity: .75; }
+.sc-tab-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.sc-tab:hover { background: rgba(255,255,255,.08); color: #fff; }
+.sc-tab[aria-selected="true"] { background: linear-gradient(180deg, #e2c58f, #c9a96a); color: #14213d; }
+.sc-tab-add { align-self: center; border: 1.5px dashed rgba(226,197,143,.6); color: #e2c58f; padding: 8px 14px; }
+.sc-cur { font-family: var(--serif); font-size: 1.25rem; color: var(--navy, #14213d); margin-right: 4px; }
+.sc-saved { color: #2f7d4f; font-size: .8rem; font-weight: 600; margin-right: 6px; }
+@media print { .sc-tabs { display: none !important; } }
+.sc-groups { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; flex-basis: 100%; }
+.sc-tools .sc-groups .pl-select { width: auto; min-width: 0; margin: 0; padding-top: 7px; padding-bottom: 7px; }
+.sc-tools .sc-groups input.sc-mixed { width: 180px; flex: 0 0 auto; margin: 0; padding: 7px 10px; }
+.sc-tools .sc-groups input.sc-mixed.hidden { display: none !important; }
+.sc-ginfo { margin: 0 0 0 4px; font-size: .8rem; }

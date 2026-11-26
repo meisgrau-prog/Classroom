@@ -172,6 +172,8 @@ function portalView() {
   $("sync-settings").classList.toggle("hidden", view !== "settings");
   $("site-home-card").classList.toggle("hidden", view !== "settings");
   $("offline-settings").classList.toggle("hidden", view !== "settings");
+  $("backup-settings").classList.toggle("hidden", view !== "settings");
+  if (view === "settings" && window.TeacherBackup && !$("backup-settings").children.length) $("backup-settings").appendChild(TeacherBackup.card());
   if (view === "settings" && window.TeacherOffline) TeacherOffline.settingsCard($("offline-settings"));
   if (view === "settings") homePreview(true);
   if (view === "settings" && window.TeacherSync) TeacherSync.settingsCard($("sync-settings"));
