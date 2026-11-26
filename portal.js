@@ -171,12 +171,14 @@ function portalView() {
   $("home-settings").classList.toggle("hidden", view !== "settings");
   $("sync-settings").classList.toggle("hidden", view !== "settings");
   $("site-home-card").classList.toggle("hidden", view !== "settings");
+  $("offline-settings").classList.toggle("hidden", view !== "settings");
+  if (view === "settings" && window.TeacherOffline) TeacherOffline.settingsCard($("offline-settings"));
   if (view === "settings") homePreview(true);
   if (view === "settings" && window.TeacherSync) TeacherSync.settingsCard($("sync-settings"));
   $("posts-area").classList.toggle("hidden", view !== "posts");
   if (view === "settings" && window.TeacherHome && !$("home-settings").children.length) TeacherHome.settingsCard($("home-settings"));
   if (location.hash === "#portal-settings" || location.hash === "#access") { const t = document.querySelector('.tab[data-tab="access"]'); if (t) t.click(); }
-  if (location.hash === "#parents") { const t = document.querySelector('.tab[data-tab="access"]'); if (t) { t.click(); const p = $("panel-parents"); if (p && !p.classList.contains("hidden")) p.scrollIntoView({ behavior: "smooth" }); } }
+  if (location.hash === "#parents") { const t = document.querySelector('.tab[data-tab="parents"]'); if (t) t.click(); }
   $("pp-title").textContent = TITLES[view];
   if (window.TeacherSections) { TeacherSections.navBar(TITLES[view]); if (sectionsReady) TeacherSections.suspend(view === "settings", "Settings"); else TeacherSections.setTrail(TITLES[view]); }
   $("changepw-open").classList.toggle("hidden", view !== "settings");
@@ -209,7 +211,8 @@ function initSections() {
     news: ["Announcements for families", I('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h6v4H7zM15 8h2M15 12h2M7 16h10"/>')],
     programs: ["Upcoming programs and events", I('<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M12 13l1.2 2.4 2.6.4-1.9 1.8.5 2.6-2.4-1.3-2.4 1.3.5-2.6-1.9-1.8 2.6-.4z"/>')],
     banners: ["“No homework tonight!” and other banners", I('<path d="M4 4h16v10H4z"/><path d="M4 14l3 6M20 14l-3 6"/><path d="M8 9h8"/>')],
-    access: ["Who can open it, class password, parent profiles and the parent list", I('<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>')],
+    access: ["Who can open it, class password, parent profiles, button words", I('<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>')],
+    parents: ["See, edit, block or delete parent profiles", I('<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6.5 6.5-6.5s6.5 2.9 6.5 6.5"/><circle cx="17.5" cy="9" r="2.5"/><path d="M16 14.3c3 .3 5.5 2.8 5.5 5.7"/>')]
   };
   const hsh = location.hash.slice(1);
   TeacherSections.init({
@@ -219,7 +222,7 @@ function initSections() {
     content: () => [...document.querySelectorAll("#posts-area .panel")],
     place: el => document.querySelector(".tabs").after(el),
     open: k => { const t = document.querySelector(`.tab[data-tab="${k}"]`); if (t) t.click(); },
-    initial: hsh === "portal-settings" || hsh === "access" || hsh === "parents" ? "access" : hsh.startsWith("tab-") ? hsh.slice(4) : null,
+    initial: hsh === "portal-settings" || hsh === "access" ? "access" : hsh === "parents" ? "parents" : hsh.startsWith("tab-") ? hsh.slice(4) : null,
     onBar: () => {
       const on = document.querySelector('.tab[aria-selected="true"]');
       if (on && location.hash !== "#settings") TeacherSections.setTrail("Parent Portal Settings", on.textContent.trim());
@@ -814,7 +817,6 @@ function accessControls() {
     // Only show the setup box for the choice that's picked (no duplicate on/off switches).
     $("lock-box").classList.toggle("hidden", v === "open" || (v === "profiles" && pa.requireCode === false));
     $("pa-box").classList.toggle("hidden", v !== "profiles");
-    showParentList();
   };
   radios.forEach(r => r.onchange = () => {
     if (r.value === "open") { lock.on = false; pa.on = false; }
@@ -825,17 +827,6 @@ function accessControls() {
   });
   show();
   window.__refreshAccess = show;
-}
-
-// The parent list sits at the bottom of "Parents & Access", only when parent profiles are chosen.
-let parentListOpened = false;
-function showParentList() {
-  const box = $("panel-parents"); if (!box || !content) return;
-  const on = !!content.settings.parentAccounts.on;
-  box.classList.toggle("hidden", !on);
-  if (!on) return;
-  const tabOpen = !$("panel-access").classList.contains("hidden");
-  if (tabOpen && !parentListOpened && window.ParentList) { parentListOpened = true; ParentList.open(box); }
 }
 
 function parentAccountControls() {
@@ -995,7 +986,7 @@ document.querySelectorAll(".tab").forEach(tab => {
   tab.addEventListener("click", () => {
     document.querySelectorAll(".tab").forEach(t => t.setAttribute("aria-selected", t === tab ? "true" : "false"));
     document.querySelectorAll(".panel").forEach(p => p.classList.toggle("hidden", p.id !== "panel-" + tab.dataset.tab));
-    if (tab.dataset.tab === "access") showParentList();
+    if (tab.dataset.tab === "parents" && window.ParentList) ParentList.open($("panel-parents"));
   });
 });
 
@@ -1113,14 +1104,10 @@ function teacherGate() {
     try { await connect(saved); openEditor(); return; }
     catch (e) { token = null; if (e.status === 401) forgetToken(); }
   }
-  if (location.hash === "#key") { showOnly("keysignin"); return; }   // backup sign-in with a GitHub key
-  // Signed in to the Teacher Area already: open right away, no second password.
-  // (If this device has no working GitHub key, the password is asked once, only when you press Save & Publish.)
-  if (await teacherIsSignedIn()) { await openFromWebsite(); return; }
+  if (location.hash === "#key") return;                    // backup sign-in with a GitHub key
   // (signed in to the Teacher Area always includes the key now, so this page opened above;
   //  anyone else gets the same Teacher Area sign-in as every teacher page)
-  // The sign-in box starts hidden (no flash); it only appears if a sign-in is really needed.
-  if (await fetchSiteLock()) teacherGate(); else showOnly("signin");   // no password set up yet: first-time screen
+  if (await fetchSiteLock()) teacherGate();               // otherwise the first-time setup screen stays
 })();
 
 // Publishing needs the GitHub key; ask for the Teacher Area password only if this device doesn't have it yet.

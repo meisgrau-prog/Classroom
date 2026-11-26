@@ -351,7 +351,7 @@
           draw(create ? "We sent a confirmation link to " + j.email + ". Click it, then press “I clicked the link”." : "");
         } catch (e) { msg.className = "status err"; msg.textContent = e.message; }
       };
-      card.append(h("p", null, "Step 1: sign in with your ", h("b", null, "teacher account"), " in the class Firebase project (the same one used for the parent list on the Parents & Access tab)."),
+      card.append(h("p", null, "Step 1: sign in with your ", h("b", null, "teacher account"), " in the class Firebase project (the same one used on the Parents tab)."),
         h("div", { class: "two" }, h("div", { class: "field" }, h("label", null, "Your email"), email), h("div", { class: "field" }, h("label", null, "Password"), pw)),
         h("div", { class: "actions" }, h("button", { type: "button", class: "button", onclick: () => go(false) }, "Sign in"), h("button", { type: "button", class: "button secondary", onclick: () => go(true) }, "Create my teacher account")), msg);
       return;

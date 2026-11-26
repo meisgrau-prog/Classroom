@@ -172,7 +172,7 @@
   /* ---------- the call form ---------- */
   function openForm(opts) {
     opts = opts || {};
-    const base = opts.edit || {};
+    const base = opts.edit || {}, editing = !!opts.edit;
     const st = {
       student: opts.student || base.student || "",
       result: base.result || RESULTS_()[0],
@@ -181,8 +181,8 @@
       subs: JSON.parse(JSON.stringify(base.subs || (opts.from ? opts.from.subs : {}) || {})),
       spoke: base.spoke || "",
       note: base.note || "",
-      follow: false, when: null,
-      ts: nowLocal()
+      follow: editing ? !!(base.followUp && !base.followUp.done) : false, when: null,
+      ts: editing ? base.ts : nowLocal()
     };
     const overlay = h("div", { class: "pl-overlay", onclick: e => { if (e.target === overlay) close(); } });
     const form = h("form", { class: "pl-form", "aria-label": "Log a call" });
@@ -200,10 +200,10 @@
     function draw() {
       form.innerHTML = "";
       const head = h("div", { class: "pl-form-head" },
-        h("div", null, h("small", null, opts.from ? "Follow-up call" : "Log a call"), h("h2", null, st.student || "Choose a student")),
+        h("div", null, h("small", null, editing ? "Edit call" : opts.from ? "Follow-up call" : "Log a call"), h("h2", null, st.student || "Choose a student")),
         h("button", { type: "button", class: "pl-x", "aria-label": "Close", onclick: close }, "×"));
       form.appendChild(head);
-      if (!opts.student && !base.student) {
+      if (!opts.student && (!base.student || editing)) {
         const sel = h("select", { class: "pl-select", onchange: e => { st.student = e.target.value; draw(); } },
           h("option", { value: "" }, "Choose a student…"), students().map(n => h("option", { value: n, selected: n === st.student ? true : null }, n)));
         form.appendChild(sel);
@@ -248,6 +248,7 @@
       const fu = h("label", { class: "pl-check" }, h("input", { type: "checkbox", checked: st.follow ? true : null, onchange: e => { st.follow = e.target.checked; if (!st.follow) st.when = null; draw(); } }), " Needs follow-up");
       form.appendChild(fu);
       if (st.follow) form.appendChild(seg(WHEN_().map(w => w.label), () => st.when ? st.when.label : "", v => st.when = v ? WHEN_().find(w => w.label === v) : null, true));
+      if (st.follow && editing && !st.when && base.followUp && base.followUp.due) form.appendChild(h("p", { class: "help", style: { margin: "4px 0 0" } }, "Currently due " + fmtShort(base.followUp.due) + " — pick a time above to change it."));
 
       form.appendChild(h("p", { class: "pl-label" }, "Date and time"));
       form.appendChild(h("input", { type: "datetime-local", class: "pl-dt", value: st.ts, onchange: e => { if (e.target.value) st.ts = e.target.value; } }));
@@ -255,12 +256,28 @@
       const msg = h("p", { class: "pl-msg" });
       form.appendChild(msg);
       form.appendChild(h("div", { class: "pl-actions" },
+        editing ? h("button", { type: "button", class: "small-btn danger pl-del", onclick: () => {
+          if (!confirm(`Delete this call with ${base.student}? It will be removed as if it never happened.`)) return;
+          const u = snapshotUndo(`Deleted call with ${base.student}.`); S.calls = S.calls.filter(x => x !== base); save(); close(); refresh(); u();
+        } }, "Delete this call") : null,
         h("button", { type: "button", class: "button secondary", onclick: close }, "Cancel"),
         h("button", { type: "submit", class: "button" }, "Save")));
       form.onsubmit = e => {
         e.preventDefault();
         if (!st.student) { msg.textContent = "Choose a student."; return; }
-        const done = snapshotUndo(`Saved call with ${st.student}.`);
+        const done = snapshotUndo(editing ? `Changed call with ${st.student}.` : `Saved call with ${st.student}.`);
+        if (editing) {                                    // update the same call in place
+          const old = base.followUp;
+          Object.assign(base, {
+            student: st.student, ts: st.ts, method: st.method || "", result: st.result,
+            cats: CATS().map(c => c.key).filter(k => st.cats.has(k)),
+            subs: Object.fromEntries(Object.entries(st.subs).filter(([k, v]) => st.cats.has(k) && v.length)),
+            spoke: st.spoke, note: st.note.trim(),
+            followUp: st.follow ? (st.when ? { due: addDue(st.ts, st.when), done: false } : old && !old.done ? old : { due: null, done: false })
+              : (old && old.done ? old : null)
+          });
+          save(); close(); refresh(); done(); return;
+        }
         const call = {
           id: uid(), student: st.student, ts: st.ts, method: st.method || "", result: st.result,
           cats: CATS().map(c => c.key).filter(k => st.cats.has(k)),
@@ -301,7 +318,12 @@
         h("button", { type: "button", class: "button secondary", onclick: () => {
           const u = snapshotUndo(`Follow-up for ${c.student} marked done.`);
           c.followUp.done = true; c.followUp.doneTs = nowLocal(); save(); refresh(); u();
-        } }, "Done")));
+        } }, "Done"),
+        compact ? null : h("button", { type: "button", class: "small-btn", onclick: () => openForm({ edit: c }) }, "Edit"),
+        compact ? null : h("button", { type: "button", class: "small-btn danger", onclick: () => {
+          if (!confirm(`Delete this call with ${c.student}? It will be removed as if it never happened.`)) return;
+          const u = snapshotUndo(`Deleted call with ${c.student}.`); S.calls = S.calls.filter(x => x !== c); save(); refresh(); u();
+        } }, "Delete")));
     return card;
   }
 
@@ -446,6 +468,7 @@
           fu && !fu.done ? h("button", { type: "button", class: "button secondary", onclick: () => {
             const u = snapshotUndo(`Marked followed up: ${c.student}.`); fu.done = true; fu.doneTs = nowLocal(); save(); refresh(); u();
           } }, "Mark followed up") : null,
+          h("button", { type: "button", class: "small-btn", onclick: () => openForm({ edit: c }) }, "Edit"),
           h("button", { type: "button", class: "small-btn danger", onclick: () => {
             if (!confirm(`Delete this call with ${c.student}?`)) return;
             const u = snapshotUndo(`Deleted call with ${c.student}.`); S.calls = S.calls.filter(x => x !== c); save(); refresh(); u();

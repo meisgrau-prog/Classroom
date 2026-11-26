@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Sign In – Rabbi Eisgrau</title>
-  <link rel="stylesheet" href="style.css?v=20261238">
-  <script src="data.js?v=20261238"></script>
-  <script src="common.js?v=20261238"></script>
+  <link rel="stylesheet" href="style.css?v=20261243">
+  <script src="data.js?v=20261243"></script>
+  <script src="common.js?v=20261243"></script>
   <script>document.documentElement.classList.add("hp-wait"); setTimeout(() => document.documentElement.classList.remove("hp-wait"), 4000);</script>
 </head>
 <body class="landing-body" data-page="signin">
@@ -80,6 +80,10 @@
       </section>
       <form class="hp-card" id="signin-form" autocomplete="on">
         <h2>Sign in</h2>
+        <div class="hp-tabs" role="tablist" aria-label="I am a">
+          <button type="button" role="tab" class="hp-tab" data-role="parent" aria-selected="true">Parent</button>
+          <button type="button" role="tab" class="hp-tab" data-role="teacher" aria-selected="false">Teacher</button>
+        </div>
         <p class="hp-sub" id="signin-sub">Enter the class password.</p>
         <input type="email" id="si-email" class="hidden" placeholder="Email" autocomplete="username" aria-label="Email">
         <input type="password" id="si-pass" placeholder="Password" autocomplete="current-password" aria-label="Password" required>
@@ -91,6 +95,7 @@
           <a href="parents.html#signup">Create a parent profile</a>
         </div>
         <a class="hp-open hidden" id="si-open" href="parents.html">Go to the Parent Portal →</a>
+        <button type="button" class="hp-role-link hidden" id="si-role-link"></button>
       </form>
     </main>
     <footer class="hp-foot">© <span data-teacher>Rabbi Eisgrau</span></footer>
@@ -137,14 +142,31 @@
       const pa = c && c.settings.parentAccounts, lock = c && c.settings.siteLock;
       const profiles = !!(pa && pa.on && pa.apiKey);
       const open = c && !profiles && !(lock && lock.on && lock.hash);
-      // One sign-in box for everyone: the password decides where you go.
-      // Teacher password → Teacher Area. Parent email + password (or the class password) → Parent Portal.
-      $("si-email").classList.toggle("hidden", !profiles);
-      $("si-parent-links").classList.toggle("hidden", !profiles);
-      $("si-open").classList.toggle("hidden", !open);
-      $("signin-sub").textContent = profiles ? "Sign in with your email and password."
-        : open ? "Families: the Parent Portal is open, no password needed. Teacher: enter your password."
-        : "Enter your password.";
+      let role = "parent";
+      function setRole(r) {
+        role = r;
+        document.querySelectorAll(".hp-tab").forEach(t => t.setAttribute("aria-selected", t.dataset.role === r ? "true" : "false"));
+        const parent = r === "parent";
+        $("si-email").classList.toggle("hidden", !(parent && profiles));
+        $("si-parent-links").classList.toggle("hidden", !(parent && profiles));
+        $("si-open").classList.toggle("hidden", !(parent && open));
+        $("si-pass").classList.toggle("hidden", parent && open);
+        $("si-btn").classList.toggle("hidden", parent && open);
+        document.querySelector(".hp-remember").classList.toggle("hidden", parent && open);
+        $("signin-sub").textContent = !parent ? "Enter your teacher password."
+          : open ? "The Parent Portal is open — no password needed."
+          : profiles ? "Sign in with your email and password." : "Enter the class password.";
+        $("si-msg").textContent = "";
+        // With parent profiles there's no Parent/Teacher switch: parents just sign in,
+        // and a small link at the bottom opens the teacher sign-in.
+        document.querySelector(".hp-tabs").classList.toggle("hidden", profiles);
+        $("si-role-link").classList.toggle("hidden", !profiles);
+        $("si-role-link").textContent = parent ? "Teacher sign-in" : "← Back to parent sign-in";
+        $("si-email").placeholder = "Email";
+        (parent && profiles ? $("si-email") : $("si-pass")).focus();
+      }
+      $("si-role-link").addEventListener("click", () => setRole(role === "parent" ? "teacher" : "parent"));
+      document.querySelectorAll(".hp-tab").forEach(t => t.addEventListener("click", () => setRole(t.dataset.role)));
       form.addEventListener("submit", async e => {
         e.preventDefault();
         msg.textContent = "";
@@ -153,22 +175,22 @@
         if (!(window.crypto && crypto.subtle)) { msg.textContent = "Please open this site with https:// at the start of the address."; return; }
         btn.disabled = true; btn.textContent = "Signing in…";
         try {
-          if (teacherLock && teacherLock.salt) {                     // the teacher's password → Teacher Area
-            let ok = false; try { ok = await teacherPasswordOK(teacherLock, pw); } catch {}
-            if (ok) { store("classroom_teacher_unlocked", teacherLock.salt, remember); rememberPortalKey(ok, remember); location.href = "teacher.html"; return; }
-          }
-          if (profiles && email) {                                   // a parent's own profile → Parent Portal
+          if (role === "parent" && email && profiles) {                                   // parent with a profile
             await ParentAccounts.signIn(pa.apiKey, email, pw, remember);
             location.href = "parents.html"; return;
           }
-          if (lock && lock.hash && !profiles) {                      // the class password → Parent Portal
+          if (teacherLock && teacherLock.salt) {                     // teacher password?
+            let ok = false; try { ok = await teacherPasswordOK(teacherLock, pw); } catch {}
+            if (ok) { store("classroom_teacher_unlocked", teacherLock.salt, remember); rememberPortalKey(ok, remember); location.href = "teacher.html"; return; }
+          }
+          if (lock && lock.hash && !profiles) {                       // class password?
             const h = await hashSitePassword(pw, lock.salt, lock.iterations);
             if (h === lock.hash) { store("classroom_site_unlocked", h, remember); location.href = "parents.html"; return; }
           }
-          msg.textContent = profiles && !email ? "Please type your email too." : "That password isn't right. Please try again.";
+          msg.textContent = role === "parent" && profiles && !email ? "Please type your email too." : "That password isn't right. Please try again.";
           $("si-pass").select();
         } catch (err) {
-          msg.textContent = err.message || "That email or password isn't right. Please try again.";
+          msg.textContent = err.message || "That password isn't right. Please try again.";
         } finally { btn.disabled = false; btn.textContent = "Sign in"; }
       });
       // older way: a photo uploaded as "signin-photo.jpg" replaces the drawing (when no background is chosen in Settings)
@@ -178,7 +200,7 @@
         img.src = "signin-photo.jpg";
       }
       addPasswordToggles(document);
-      (profiles ? $("si-email") : $("si-pass")).focus();
+      setRole("parent");
       document.documentElement.classList.remove("hp-wait");     // show the sign-in box now that it's set up (no flash of the wrong one)
     })();
   </script>

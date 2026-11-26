@@ -115,15 +115,15 @@
   }
   const when = t => { const d = new Date(t), today = new Date(); const same = d.toDateString() === today.toDateString(); return (same ? "Today" : d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })) + " · " + d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }); };
   function attach(head, key) {
-    if (head.querySelector(".ud-bar")) return;
-    const bar = h("div", { class: "ud-bar" });
+    if (head.querySelector(".ud-undo-box")) return;
+    const bar = h("span", { class: "ud-undo-box" });
     const draw = () => {
       bar.innerHTML = "";
       const list = (read()[key] || []);
-      const undoBtn = h("button", { type: "button", class: "ud-btn", disabled: list.length ? null : true, title: list.length ? "Undo: " + list[0].desc : "Nothing to undo",
+      const undoBtn = h("button", { type: "button", class: "ud-btn ud-undo", disabled: list.length ? null : true, title: list.length ? "Undo: " + list[0].desc : "Nothing to undo",
         onclick: () => { if (confirm(`Undo this change?\n\n${list[0].desc}\n(${when(list[0].at)})`)) undoTo(key, 0); } }, h("span", { class: "ud-ico" }, "↶"), " Undo");
       const menu = h("div", { class: "ud-menu hidden", role: "menu" });
-      const histBtn = h("button", { type: "button", class: "ud-btn ghost", disabled: list.length ? null : true, "aria-haspopup": "true",
+      const histBtn = h("button", { type: "button", class: "ud-btn ghost ud-hist", disabled: list.length ? null : true, "aria-haspopup": "true",
         onclick: e => { e.stopPropagation(); menu.classList.toggle("hidden"); } }, "Recent changes ▾");
       menu.appendChild(h("p", { class: "ud-menu-head" }, "Undo back to any point. Newest first."));
       list.forEach((x, i) => menu.appendChild(h("div", { class: "ud-item" + (x.undo ? " is-undo" : "") },
@@ -134,7 +134,8 @@
       document.addEventListener("click", e => { if (!bar.contains(e.target)) menu.classList.add("hidden"); });
     };
     draw();
-    head.appendChild(bar);
+    let holder = head.querySelector(".ud-bar"); if (!holder) { holder = h("div", { class: "ud-bar" }); head.appendChild(holder); }
+    holder.appendChild(bar);
     window.addEventListener("teacher-undo-changed", draw);
   }
   // keep the button up to date after each save
