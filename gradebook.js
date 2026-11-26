@@ -81,6 +81,7 @@
   /* ---------- stats ---------- */
   function studentAvg(c, stu, from, to) {
     if (c.better === "text") return null;
+    if (isSum(c)) { const s = score(c, stu, from, to); return s.v; }
     const vals = [];
     subjKeys(c).forEach(sk => Object.entries(((G.grades[c.id] || {})[sk]) || {}).forEach(([d, row]) => {
       if (d < from || d > to) return; const n = num(row[stu]); if (n != null) vals.push(n);
@@ -93,6 +94,19 @@
     if (c.better === "low") { const days = Math.max(1, schoolDays(from, to).length); return Math.max(0, 100 - (v / (c.max * days)) * 100 * 3); }
     return Math.min(100, (v / c.max) * 100);
   }
+  // a student's result in a category: average, or added up ("4/5", "5/5 done")
+  const isSum = c => c.better === "high" && c.calc === "sum";
+  function score(c, stu, from, to) {
+    if (c.better === "text") return { v: null, n: 0, p: null, text: "" };
+    const vals = [];
+    subjKeys(c).forEach(sk => Object.entries(((G.grades[c.id] || {})[sk]) || {}).forEach(([d, row]) => { if (d < from || d > to) return; const n = num(row[stu]); if (n != null) vals.push(n); }));
+    if (!vals.length) return { v: null, n: 0, p: null, text: "" };
+    const sum = vals.reduce((a, b) => a + b, 0);
+    if (isSum(c)) { const poss = vals.length * (c.max || 0); return { v: sum, n: vals.length, poss, p: poss ? Math.min(100, sum / poss * 100) : null, text: sumText(sum, poss) }; }
+    if (c.better === "low") return { v: sum, n: vals.length, p: pct(c, sum, from, to), text: round(sum) };
+    const avg = sum / vals.length; return { v: avg, n: vals.length, p: pct(c, avg, from, to), text: round(avg) };
+  }
+  const sumText = (v, poss) => poss ? `${round(v)}/${round(poss)}${v >= poss ? " done" : ""}` : round(v);
   function tone(p) { if (p == null) return ""; return p >= G.settings.good ? "g" : p >= G.settings.ok ? "y" : "r"; }
   const round = v => v == null ? "" : (Math.round(v * 10 ** G.settings.decimals) / 10 ** G.settings.decimals).toString();
 
@@ -215,9 +229,9 @@
       const nm = sheetName(c.name, used);
       const rows = [];
       const n = dates.length, avgCol = 2 + n, lastDateCol = colName(1 + n);
-      const header = [{ v: "First", s: 1 }, { v: "Last", s: 1 }, ...dates.map(d => ({ v: excelDate(d), s: 2 })), c.better === "text" ? null : { v: c.better === "low" ? "Total" : "Average", s: 1 }];
+      const header = [{ v: "First", s: 1 }, { v: "Last", s: 1 }, ...dates.map(d => ({ v: excelDate(d), s: 2 })), c.better === "text" ? null : { v: c.better === "low" || isSum(c) ? "Total" : "Average", s: 1 }];
       rows.push(header);
-      const fn = c.better === "low" ? "SUM" : "AVERAGE";
+      const fn = c.better === "low" || isSum(c) ? "SUM" : "AVERAGE";
       const rowFormula = r => n ? { f: `IFERROR(${fn}(C${r}:${lastDateCol}${r}),"")`, s: 3 } : null;
       const subs = subjKeys(c);
       let totalRowOf = {};
@@ -412,36 +426,52 @@
         h("button", { type: "button", class: "button secondary", onclick: () => window.print() }, "Print"))));
     p.appendChild(h("h2", { class: "gb-print-title" }, `Gradebook — ${fmt(from, { month: "short", day: "numeric" })} to ${fmt(to, { month: "short", day: "numeric", year: "numeric" })}`));
     const shown = cats().filter(c => c.show && c.better !== "text");
-    // class averages
+    // class results per category (click → Enter Grades)
     const stats = shown.map(c => {
-      const vals = names.map(s => studentAvg(c, s, from, to)).filter(v => v != null);
-      const avg = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
-      return { c, avg, p: pct(c, avg, from, to), n: vals.length };
+      const sc = names.map(s => score(c, s, from, to)).filter(x => x.n);
+      if (!sc.length) return { c, text: "—", p: null, n: 0 };
+      if (isSum(c)) { const v = sc.reduce((a, x) => a + x.v, 0), poss = sc.reduce((a, x) => a + x.poss, 0); return { c, n: sc.length, p: poss ? v / poss * 100 : null, text: `${round(v / sc.length)}/${round(poss / sc.length)}`, sub: `class average · added up · ${sc.length} students` }; }
+      const avg = sc.reduce((a, x) => a + x.v, 0) / sc.length;
+      return { c, n: sc.length, p: pct(c, avg, from, to), text: round(avg) + (c.better === "low" ? "" : c.max ? ` / ${c.max}` : ""), sub: c.better === "low" ? "avg incidents per student" : `class average · ${sc.length} students` };
     });
-    p.appendChild(h("div", { class: "gb-tiles" }, stats.map(s => h("div", { class: "gb-tile " + tone(s.p), style: { "--c": s.c.color } },
+    p.appendChild(h("div", { class: "gb-tiles" }, stats.map(s => h("button", { type: "button", class: "gb-tile " + tone(s.p), style: { "--c": s.c.color }, title: "Open in Enter Grades", onclick: () => goGrid(s.c, null, from, to) },
       h("span", { class: "gb-tile-name" }, s.c.name),
-      h("span", { class: "gb-tile-num" }, s.avg == null ? "—" : round(s.avg) + (s.c.better === "low" ? "" : s.c.max ? ` / ${s.c.max}` : "")),
-      h("small", null, s.c.better === "low" ? "avg incidents per student" : s.n ? `class average · ${s.n} students` : "no grades yet")))));
+      h("span", { class: "gb-tile-num" }, s.text),
+      h("small", null, s.n ? s.sub : "no grades yet")))));
     // attention list
     const flags = [];
-    names.forEach(s => shown.forEach(c => { const v = studentAvg(c, s, from, to); const pc = pct(c, v, from, to); if (pc != null && pc < G.settings.attention) flags.push({ s, c, v }); }));
+    names.forEach(s => shown.forEach(c => { const x = score(c, s, from, to); if (x.p != null && x.p < G.settings.attention) flags.push({ s, c, x }); }));
     const att = h("div", { class: "card" }, h("h3", null, "Needs attention ", h("span", { class: "pl-count" }, String(new Set(flags.map(f => f.s)).size))),
-      h("p", { class: "help" }, `Below ${G.settings.attention}% in a category for these dates.`));
+      h("p", { class: "help" }, `Below ${G.settings.attention}% in a category for these dates. Click a category to fix grades.`));
     if (!flags.length) att.appendChild(h("p", { class: "pl-none" }, "Nobody is below the line. 👏"));
     else {
       const by = {}; flags.forEach(f => (by[f.s] = by[f.s] || []).push(f));
-      att.appendChild(h("div", { class: "gb-flags" }, Object.entries(by).map(([s, fs]) => h("button", { type: "button", class: "gb-flag", onclick: () => studentDetail(s, from, to) },
-        h("strong", null, s), fs.map(f => h("span", { class: "pl-tag", style: { background: f.c.color, borderColor: f.c.color, color: "#fff" } }, `${f.c.name}: ${round(f.v)}`))))));
+      att.appendChild(h("div", { class: "gb-flags" }, Object.entries(by).map(([s, fs]) => h("div", { class: "gb-flag" },
+        h("button", { type: "button", class: "gb-link", onclick: () => studentDetail(s, from, to) }, h("strong", null, s)),
+        fs.map(f => h("button", { type: "button", class: "pl-tag gb-tag-btn", style: { background: f.c.color, borderColor: f.c.color, color: "#fff" }, title: "Open in Enter Grades", onclick: () => goGrid(f.c, s, from, to) }, `${f.c.name}: ${f.x.text}`))))));
     }
     p.appendChild(att);
-    // student table
+    // student table (click a grade → Enter Grades)
     const table = h("table", { class: "gb-table" },
-      h("thead", null, h("tr", null, h("th", null, "Student"), shown.map(c => h("th", { style: { borderTopColor: c.color } }, c.name, h("small", null, c.better === "low" ? "total" : c.max ? `of ${c.max}` : ""))))),
+      h("thead", null, h("tr", null, h("th", null, "Student"), shown.map(c => h("th", { style: { borderTopColor: c.color } }, h("button", { type: "button", class: "gb-th-btn", onclick: () => goGrid(c, null, from, to) }, c.name), h("small", null, c.better === "low" ? "total" : isSum(c) ? "added up" : c.max ? `of ${c.max}` : ""))))),
       h("tbody", null, names.map(s => h("tr", null,
         h("th", null, h("button", { type: "button", class: "gb-link", onclick: () => studentDetail(s, from, to) }, s)),
-        shown.map(c => { const v = studentAvg(c, s, from, to); return h("td", { class: "gb-c " + tone(pct(c, v, from, to)) }, v == null ? "" : round(v)); })))));
+        shown.map(c => { const x = score(c, s, from, to); return h("td", { class: "gb-c gb-go " + tone(x.p), title: `Open ${c.name} for ${s} in Enter Grades`, onclick: () => goGrid(c, s, from, to) }, x.text); })))));
     p.appendChild(h("div", { class: "card gb-scroll" }, h("h3", null, "Students ", h("small", { class: "help" }, `${fmt(from, { month: "short", day: "numeric" })} – ${fmt(to, { month: "short", day: "numeric", year: "numeric" })}`)), table,
-      h("p", { class: "help" }, `Green ≥ ${G.settings.good}% · gold ≥ ${G.settings.ok}% · red below. Click a name for details.`)));
+      h("p", { class: "help" }, `Green ≥ ${G.settings.good}% · gold ≥ ${G.settings.ok}% · red below. Click a grade to open it in Enter Grades; click a name for details.`)));
+  }
+  // jump from the dashboard to that grade in Enter Grades
+  function goGrid(c, stu, from, to) {
+    view.cat = c.id; view.subj = null;
+    let best = null, bestSk = null;
+    subjKeys(c).forEach(sk => Object.entries(((G.grades[c.id] || {})[sk]) || {}).forEach(([d, row]) => {
+      if (d < from || d > to) return; if (stu ? row[stu] == null || row[stu] === "" : !Object.keys(row).length) return;
+      if (!best || d > best) { best = d; bestSk = sk; }
+    }));
+    view.subj = bestSk && bestSk !== "_" ? bestSk : null;
+    view.week = weekStartOf(best || (to < today() ? to : today()));
+    view.focus = stu || null;
+    show("grid");
   }
   function studentDetail(s, from, to) {
     const overlay = h("div", { class: "pl-overlay", onclick: e => { if (e.target === overlay) overlay.remove(); } });
@@ -450,8 +480,9 @@
     cats().forEach(c => {
       const dates = catDates(c, from, to).filter(d => subjKeys(c).some(sk => getV(c.id, sk, d, s) !== undefined));
       if (!dates.length) return;
-      const avg = studentAvg(c, s, from, to);
-      box.appendChild(h("h3", { class: "gb-dh", style: { borderLeftColor: c.color } }, c.name, avg != null ? h("span", { class: "gb-c " + tone(pct(c, avg, from, to)) }, (c.better === "low" ? "total " : "avg ") + round(avg)) : null));
+      const x = score(c, s, from, to);
+      box.appendChild(h("h3", { class: "gb-dh", style: { borderLeftColor: c.color } }, c.name, x.n ? h("span", { class: "gb-c " + tone(x.p) }, (c.better === "low" || isSum(c) ? "total " : "avg ") + x.text) : null,
+        h("button", { type: "button", class: "small-btn", style: { marginLeft: "auto" }, onclick: () => { overlay.remove(); goGrid(c, s, from, to); } }, "Edit grades ›")));
       const t = h("table", { class: "gb-table small" }, h("tr", null, h("th", null, ""), dates.map(d => h("th", null, fmt(d)))),
         subjKeys(c).map(sk => h("tr", null, h("th", null, sk === "_" ? "" : sk), dates.map(d => h("td", { class: c.better === "text" ? "gb-text" : "" }, getV(c.id, sk, d, s) || "")))));
       box.appendChild(h("div", { class: "gb-scroll" }, t));
@@ -496,10 +527,10 @@
     const sk = view.subj;
     const grid = h("table", { class: "gb-grid", style: { "--c": c.color } });
     grid.appendChild(h("thead", null, h("tr", null, h("th", { class: "gb-name" }, c.name + (sk !== "_" ? " · " + sk : "")),
-      dates.map(d => h("th", { class: d === today() ? "today" : "" }, fmt(d))), c.better === "text" ? null : h("th", { class: "gb-avg" }, c.better === "low" ? "Total" : "Avg"))));
+      dates.map(d => h("th", { class: d === today() ? "today" : "" }, fmt(d))), c.better === "text" ? null : h("th", { class: "gb-avg" }, c.better === "low" || isSum(c) ? "Total" : "Avg"))));
     const body = h("tbody");
     names.forEach((s, r) => {
-      const tr = h("tr", null, h("th", { class: "gb-name" }, s));
+      const tr = h("tr", { class: view.focus === s ? "gb-focus" : null }, h("th", { class: "gb-name" }, s));
       dates.forEach((d, ci) => {
         const td = h("td", { "data-r": r, "data-c": ci, class: "gb-cell" + (c.better === "text" ? " text" : "") });
         td.textContent = getV(c.id, sk, d, s) || "";
@@ -513,6 +544,11 @@
     p.appendChild(h("div", { class: "card gb-scroll gb-gridcard" }, grid,
       h("p", { class: "help" }, "Click a cell and type. Arrow keys / Enter / Tab move. Drag the gold square at a cell's corner to copy it down or across (double-click it to fill down). Shift-click or drag to select; Ctrl+C / Ctrl+V copy and paste with Excel; Delete clears.")));
     Grid.mount(grid, { names, dates, c, sk });
+    if (view.focus) {          // came from the dashboard: select that student's latest grade
+      const r = names.indexOf(view.focus); view.focus = null;
+      if (r >= 0) { let col = 0; dates.forEach((d, i) => { if ((getV(c.id, sk, d, names[r]) || "") !== "") col = i; });
+        setTimeout(() => { Grid.go(r, col); const row = grid.querySelectorAll("tbody tr")[r]; if (row) row.scrollIntoView({ block: "center", behavior: "smooth" }); }, 60); }
+    }
   }
   function fillBlanks(v, colOnly) {
     v = String(v || "").trim(); if (!v) { alert("Type a value to fill in first."); return; }
@@ -540,9 +576,10 @@
         const c = ctx.c; if (c.better === "text") return;
         ctx.names.forEach((s, r) => {
           const vals = ctx.dates.map(d => num(getV(c.id, ctx.sk, d, s))).filter(v => v != null);
-          const v = vals.length ? (c.better === "low" ? vals.reduce((a, b) => a + b, 0) : vals.reduce((a, b) => a + b, 0) / vals.length) : null;
-          const td = table.querySelector(`[data-avg="${r}"]`); td.textContent = round(v);
-          td.className = "gb-avg " + (c.better === "low" ? "" : tone(v == null ? null : (v / c.max) * 100));
+          const sum = vals.reduce((a, b) => a + b, 0), summed = isSum(c), poss = vals.length * (c.max || 0);
+          const v = vals.length ? (c.better === "low" || summed ? sum : sum / vals.length) : null;
+          const td = table.querySelector(`[data-avg="${r}"]`); td.textContent = v == null ? "" : summed ? sumText(v, poss) : round(v);
+          td.className = "gb-avg " + (c.better === "low" ? "" : tone(v == null || !c.max ? null : summed ? (poss ? v / poss * 100 : null) : (v / c.max) * 100));
         });
         ctx.dates.forEach((d, ci) => {
           const vals = ctx.names.map(s => num(getV(c.id, ctx.sk, d, s))).filter(v => v != null);
@@ -574,6 +611,7 @@
         if (!extend) this.active = [r, c];
         paint(); cell(r, c).scrollIntoView({ block: "nearest", inline: "nearest" });
       };
+      this.go = go;
       const startEdit = (initial) => {
         const [r, c] = this.active, td = cell(r, c), host = table.parentElement.getBoundingClientRect(), b = td.getBoundingClientRect();
         Object.assign(editor.style, { display: "block", left: (b.left - host.left + table.parentElement.scrollLeft) + "px", top: (b.top - host.top + table.parentElement.scrollTop) + "px", width: b.width + "px", height: b.height + "px" });
@@ -741,6 +779,8 @@
               [["daily", "Every school day"], ["weekly", "Once a week"]].map(([v, l]) => h("option", { value: v, selected: c.freq === v ? true : null }, l)))),
             field("Kind", h("select", { class: "pl-select", onchange: e => { c.better = e.target.value; dirty(); } },
               [["high", "Score (higher is better)"], ["low", "Count (lower is better, e.g. incidents)"], ["text", "Notes (text only)"]].map(([v, l]) => h("option", { value: v, selected: c.better === v ? true : null }, l)))),
+            field("Combine grades", h("select", { class: "pl-select", title: "Average (e.g. 4.2 out of 5) or add them up (e.g. 4/5, 5/5 done)", onchange: e => { c.calc = e.target.value; dirty(); } },
+              [["avg", "Average"], ["sum", "Add up (e.g. 4/5, 5/5 done)"]].map(([v, l]) => h("option", { value: v, selected: (c.calc || "avg") === v ? true : null }, l)))),
             field("Top score / warning count", h("input", { type: "number", min: "0", step: "any", class: "cr-num", value: c.max, oninput: e => { c.max = parseFloat(e.target.value) || 0; dirty(); } })),
             field("On dashboard", h("input", { type: "checkbox", checked: c.show ? true : null, onchange: e => { c.show = e.target.checked; dirty(); } }))),
           subs);
@@ -900,14 +940,15 @@
     const names = students(), t = today(), from = weekStartOf(t), to = addDays(from, 6);
     const shown = cats().filter(c => c.show && c.better !== "text");
     const averages = shown.map(c => {
-      const vals = names.map(s => studentAvg(c, s, from, to)).filter(v => v != null);
-      const avg = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
-      return { name: c.name, color: c.color, avg: round(avg), max: c.max, low: c.better === "low", tone: tone(pct(c, avg, from, to)), n: vals.length };
+      const sc = names.map(s => score(c, s, from, to)).filter(x => x.n);
+      if (isSum(c) && sc.length) { const v = sc.reduce((a, x) => a + x.v, 0), poss = sc.reduce((a, x) => a + x.poss, 0); return { name: c.name, color: c.color, avg: `${round(v / sc.length)}/${round(poss / sc.length)}`, max: 0, low: true, tone: tone(poss ? v / poss * 100 : null), n: sc.length }; }
+      const avg = sc.length ? sc.reduce((a, x) => a + x.v, 0) / sc.length : null;
+      return { name: c.name, color: c.color, avg: round(avg), max: c.max, low: c.better === "low", tone: tone(pct(c, avg, from, to)), n: sc.length };
     }).filter(a => a.n);
     const attention = [], stars = [];
     names.forEach(s => {
       const flags = [], ps = [];
-      shown.forEach(c => { const v = studentAvg(c, s, from, to), p = pct(c, v, from, to); if (p == null) return; ps.push(p); if (p < G.settings.attention) flags.push({ cat: c.name, color: c.color, v: round(v) }); });
+      shown.forEach(c => { const x = score(c, s, from, to), p = x.p; if (p == null) return; ps.push(p); if (p < G.settings.attention) flags.push({ cat: c.name, color: c.color, v: x.text }); });
       if (flags.length) attention.push({ name: s, flags });
       if (ps.length) stars.push({ name: s, p: ps.reduce((a, b) => a + b, 0) / ps.length });
     });

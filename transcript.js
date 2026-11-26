@@ -68,13 +68,16 @@
       subj.forEach(sk => Object.entries(((G.grades || {})[c.id] || {})[sk] || {}).forEach(([d, row]) => { if (d >= from && d <= to && row[name] != null && row[name] !== "") entries.push({ date: d, subj: sk === "_" ? "" : sk, v: row[name] }); }));
       entries.sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : a.subj.localeCompare(b.subj));
       const nums = entries.map(e => num(e.v)).filter(v => v != null);
-      let avg = null, pct = null;
+      let avg = null, pct = null, text = "";
+      const summed = c.better === "high" && c.calc === "sum";
       if (c.better !== "text" && nums.length) {
-        avg = c.better === "low" ? nums.reduce((a, b) => a + b, 0) : nums.reduce((a, b) => a + b, 0) / nums.length;
-        if (c.max) pct = c.better === "low" ? null : Math.min(100, avg / c.max * 100);
+        const sum = nums.reduce((a, b) => a + b, 0), poss = nums.length * (c.max || 0);
+        avg = c.better === "low" || summed ? sum : sum / nums.length;
+        if (c.max) pct = c.better === "low" ? null : summed ? (poss ? Math.min(100, sum / poss * 100) : null) : Math.min(100, avg / c.max * 100);
+        text = summed && poss ? `${round(sum)}/${round(poss)}${sum >= poss ? " done" : ""}` : round(avg);
       }
       const bySubj = {}; if (c.better !== "text" && subj[0] !== "_") subj.forEach(s => { const v = entries.filter(e => e.subj === s).map(e => num(e.v)).filter(x => x != null); if (v.length) bySubj[s] = v.reduce((a, b) => a + b, 0) / v.length; });
-      return { c, entries, n: nums.length, avg, pct, bySubj, round };
+      return { c, entries, n: nums.length, avg, pct, bySubj, round, text, summed };
     });
     const pcts = cats.map(x => x.pct).filter(v => v != null);
     return { cats, overall: pcts.length ? pcts.reduce((a, b) => a + b, 0) / pcts.length : null, good: G.settings.good || 80, ok: G.settings.ok || 70, round };
@@ -84,12 +87,12 @@
     const D = gradeData(name, from, to);
     if (!D) return section("Grades", null, h("p", { class: "tp-empty" }, "The gradebook hasn't been set up on this device."));
     const used = D.cats.filter(x => x.entries.length);
-    const sum = table(["Category", { t: "Grades", cls: "num" }, { t: "Average", cls: "num" }, { t: "Out of", cls: "num" }, { t: "Percent", cls: "num" }, "By subject"],
+    const sum = table(["Category", { t: "Grades", cls: "num" }, { t: "Result", cls: "num" }, { t: "Out of", cls: "num" }, { t: "Percent", cls: "num" }, "By subject"],
       used.map(x => h("tr", null,
-        h("td", null, h("span", { class: "tp-dot", style: { background: x.c.color } }), x.c.name, x.c.better === "low" ? h("small", null, " (total — lower is better)") : x.c.better === "text" ? h("small", null, " (notes)") : null),
+        h("td", null, h("span", { class: "tp-dot", style: { background: x.c.color } }), x.c.name, x.summed ? h("small", null, " (added up)") : x.c.better === "low" ? h("small", null, " (total — lower is better)") : x.c.better === "text" ? h("small", null, " (notes)") : null),
         h("td", { class: "num" }, String(x.c.better === "text" ? x.entries.length : x.n)),
-        h("td", { class: "num strong" }, x.c.better === "text" ? "—" : x.round(x.avg)),
-        h("td", { class: "num" }, x.c.better === "low" || x.c.better === "text" || !x.c.max ? "—" : String(x.c.max)),
+        h("td", { class: "num strong" }, x.c.better === "text" ? "—" : x.text),
+        h("td", { class: "num" }, x.c.better === "low" || x.c.better === "text" || x.summed || !x.c.max ? "—" : String(x.c.max)),
         h("td", { class: "num" }, x.pct == null ? "—" : h("span", { class: "tp-pct " + tone(x.pct, D) }, Math.round(x.pct) + "%")),
         h("td", { class: "tp-subj" }, Object.entries(x.bySubj).map(([s, v]) => h("span", { dir: "auto" }, `${s}: ${x.round(v)}`))))));
     const kids = [sum];
@@ -172,7 +175,7 @@
     const phone = read("teacher_phone_log_v1") || {}, sup = read("teacher_support_v1") || {};
     const rows = names.map(n => { const D = gradeData(n, from, to);
       return h("tr", null, h("td", { class: "tp-nowrap" }, h("b", null, n)),
-        cats.map(c => { const x = D && D.cats.find(y => y.c.id === c.id); return h("td", { class: "num" }, x && x.n ? (x.pct != null ? h("span", { class: "tp-pct " + tone(x.pct, D) }, x.round(x.avg)) : x.round(x.avg)) : "—"); }),
+        cats.map(c => { const x = D && D.cats.find(y => y.c.id === c.id); return h("td", { class: "num" }, x && x.n ? (x.pct != null ? h("span", { class: "tp-pct " + tone(x.pct, D) }, x.text) : x.text) : "—"); }),
         h("td", { class: "num strong" }, D && D.overall != null ? Math.round(D.overall) + "%" : "—"),
         (() => { const A = attendanceData(n, from, to); return [h("td", { class: "num" }, A.taken ? String(A.c.A) : "—"), h("td", { class: "num" }, A.taken ? String(A.c.L) : "—"),
           h("td", { class: "num" }, A.pct == null ? "—" : h("span", { class: "tp-pct " + (A.pct >= 95 ? "g" : A.pct >= 85 ? "y" : "r") }, A.pct + "%"))]; })(),

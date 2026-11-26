@@ -2528,3 +2528,15 @@ html.hp-wait .hp-card > *, html.hp-wait .hp-hero > *, html.hp-wait .hp-foot { vi
 @media (max-width: 700px) { .at-note { margin-left: 0 !important; } .at-bulk { margin-left: 0; } .at-seg button { padding: 6px 9px; } }
 .spf-tiles { grid-template-columns: repeat(5, minmax(0, 1fr)); } @media (max-width: 1100px) { .spf-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); } } @media (max-width: 600px) { .spf-tiles { grid-template-columns: 1fr 1fr; } }
 .at-day .pl-dt { width: auto !important; min-width: 150px; }
+
+/* Gradebook: click through to Enter Grades */
+button.gb-tile { font: inherit; text-align: left; cursor: pointer; border: 0; width: 100%; }
+button.gb-tile:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(20,33,61,.12); }
+.gb-go { cursor: pointer; transition: box-shadow .15s; }
+.gb-go:hover { box-shadow: inset 0 0 0 2px var(--gold); }
+.gb-th-btn { border: 0; background: none; padding: 0; font: inherit; color: inherit; cursor: pointer; text-decoration: underline; text-decoration-color: #d9c9a6; text-underline-offset: 3px; }
+.gb-flag { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.gb-tag-btn { cursor: pointer; border: 0; font: inherit; }
+.gb-grid tr.gb-focus th.gb-name { background: #fde7c0 !important; box-shadow: inset 4px 0 0 var(--gold); }
+.gb-grid tr.gb-focus td { background: #fffaf0; }
+.gb-dh { display: flex; align-items: center; gap: 10px; }
