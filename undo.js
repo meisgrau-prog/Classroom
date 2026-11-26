@@ -11,7 +11,8 @@
     teacher_phone_log_v1: { section: "phonelog", name: "Phone Log", describe: descPhone },
     teacher_gradebook_v1: { section: "gradebook", name: "Gradebook", describe: descGrades },
     teacher_student_info_v1: { section: "info", name: "Student Info", describe: descInfo },
-    teacher_support_v1: { section: "support", name: "Student Support", describe: descSupport }
+    teacher_support_v1: { section: "support", name: "Student Support", describe: descSupport },
+    teacher_attendance_v1: { section: "attendance", name: "Attendance", describe: descAttendance }
   };
   const KEEP = 30, MAX_BYTES = 1500000, MERGE_MS = 4000;
   const ls = window.localStorage;
@@ -64,6 +65,16 @@
     if (ch.length === 1) return !rb[ch[0]] ? `Cleared info for ${ch[0]}` : !ra[ch[0]] ? `Added info for ${ch[0]}` : `Edited ${ch[0]}`;
     if (ch.length > 1) return `Changed info for ${plural(ch.length, "student")}`;
     return "Changed Student Info";
+  }
+  function descAttendance(prev, next) {
+    const a = (parse(prev) || {}).days || {}, b = (parse(next) || {}).days || {};
+    const ch = []; new Set([...Object.keys(a), ...Object.keys(b)]).forEach(d => { const x = a[d] || {}, y = b[d] || {}; new Set([...Object.keys(x), ...Object.keys(y)]).forEach(n => { if (x[n] !== y[n]) ch.push([d, n, y[n]]); }); });
+    const L = { P: "present", A: "absent", L: "late", E: "excused" };
+    const day = d => new Date(d + "T12:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    if (ch.length === 1) return ch[0][2] ? `Marked ${ch[0][1]} ${L[ch[0][2]]} on ${day(ch[0][0])}` : `Cleared ${ch[0][1]} on ${day(ch[0][0])}`;
+    const nDays = new Set(ch.map(c => c[0])).size;
+    if (ch.length) return nDays === 1 ? `Changed attendance for ${ch.length} students on ${day(ch[0][0])}` : `Changed ${ch.length} attendance marks over ${nDays} days`;
+    return "Changed attendance notes";
   }
   function descGrades(prev, next) {
     const a = parse(prev) || {}, b = parse(next) || {};

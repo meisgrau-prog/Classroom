@@ -146,6 +146,25 @@
     return section("Student Support", list.length ? `${list.length} entr${list.length === 1 ? "y" : "ies"} · ${worked.length} worked` : null, kids);
   }
 
+  /* ---------- Attendance ---------- */
+  const ATT = { P: "Present", A: "Absent", L: "Late", E: "Excused" };
+  function attendanceData(name, from, to) {
+    const S = read("teacher_attendance_v1") || {}, days = S.days || {}, notes = S.notes || {};
+    const c = { P: 0, A: 0, L: 0, E: 0 }, list = [];
+    Object.keys(days).sort().forEach(d => { if (d < from || d > to) return; const v = days[d][name]; if (!v) return; c[v]++; if (v !== "P") list.push({ date: d, status: v, note: (notes[d] || {})[name] || "" }); });
+    const taken = c.P + c.A + c.L + c.E;
+    return { c, taken, list, pct: taken - c.E > 0 ? Math.round((c.P + c.L) / (taken - c.E) * 1000) / 10 : null };
+  }
+  function attendanceSection(name, from, to, notes) {
+    const D = attendanceData(name, from, to);
+    if (!D.taken) return section("Attendance", null, h("p", { class: "tp-empty" }, "No attendance taken for these dates."));
+    return section("Attendance", `${D.taken} school day${D.taken === 1 ? "" : "s"} recorded`,
+      table(["Present", "Absent", "Late", "Excused", { t: "Attendance", cls: "num" }].map(x => typeof x === "string" ? { t: x, cls: "num" } : x),
+        [h("tr", null, ["P", "A", "L", "E"].map(k => h("td", { class: "num strong" }, String(D.c[k]))), h("td", { class: "num" }, h("span", { class: "tp-pct " + (D.pct >= 95 ? "g" : D.pct >= 85 ? "y" : "r") }, D.pct + "%")))], "tp-compact"),
+      D.list.length ? h("div", { class: "tp-sub" }, h("h4", null, "Days absent, late or excused"),
+        table(["Date", "Status", notes ? "Note" : null].filter(Boolean), D.list.map(x => h("tr", null, h("td", { class: "tp-date" }, fmtDate(x.date)), h("td", null, h("span", { class: "tp-att " + x.status }, ATT[x.status])), notes ? h("td", { class: "tp-note" }, x.note) : null)), "tp-compact")) : null);
+  }
+
   /* ---------- class summary (one page, every student) ---------- */
   function classSummary(names, from, to) {
     const G = read("teacher_gradebook_v1");
@@ -155,13 +174,15 @@
       return h("tr", null, h("td", { class: "tp-nowrap" }, h("b", null, n)),
         cats.map(c => { const x = D && D.cats.find(y => y.c.id === c.id); return h("td", { class: "num" }, x && x.n ? (x.pct != null ? h("span", { class: "tp-pct " + tone(x.pct, D) }, x.round(x.avg)) : x.round(x.avg)) : "—"); }),
         h("td", { class: "num strong" }, D && D.overall != null ? Math.round(D.overall) + "%" : "—"),
+        (() => { const A = attendanceData(n, from, to); return [h("td", { class: "num" }, A.taken ? String(A.c.A) : "—"), h("td", { class: "num" }, A.taken ? String(A.c.L) : "—"),
+          h("td", { class: "num" }, A.pct == null ? "—" : h("span", { class: "tp-pct " + (A.pct >= 95 ? "g" : A.pct >= 85 ? "y" : "r") }, A.pct + "%"))]; })(),
         h("td", { class: "num" }, String((phone.calls || []).filter(c => c.student === n && c.ts.slice(0, 10) >= from && c.ts.slice(0, 10) <= to).length)),
         h("td", { class: "num" }, String((sup.entries || []).filter(e => e.student === n && e.date >= from && e.date <= to).length))); });
-    return section("Class Summary", `${names.length} students`, table(["Student", ...cats.map(c => ({ t: c.name, cls: "num" })), { t: "Overall", cls: "num" }, { t: "Contacts", cls: "num" }, { t: "Support", cls: "num" }], rows, "tp-compact"));
+    return section("Class Summary", `${names.length} students`, table(["Student", ...cats.map(c => ({ t: c.name, cls: "num" })), { t: "Overall", cls: "num" }, { t: "Absent", cls: "num" }, { t: "Late", cls: "num" }, { t: "Attend.", cls: "num" }, { t: "Contacts", cls: "num" }, { t: "Support", cls: "num" }], rows, "tp-compact"));
   }
 
   /* ---------- one student's report ---------- */
-  const SECTIONS = [["info", "Student information"], ["grades", "Grades"], ["gradesDetail", "Every grade (detail)"], ["calls", "Parent contact log"], ["support", "Student support"]];
+  const SECTIONS = [["info", "Student information"], ["grades", "Grades"], ["gradesDetail", "Every grade (detail)"], ["attendance", "Attendance"], ["calls", "Parent contact log"], ["support", "Student support"]];
   function report(name, o) {
     const page = h("article", { class: "tp-page" });
     const tch = teacher(), gr = grade();
@@ -176,6 +197,7 @@
         row.birthday ? h("div", null, h("div", { class: "tp-label" }, "Birthday"), h("div", null, pretty({ type: "date", key: "birthday" }, row.birthday))) : null));
     if (o.info) page.appendChild(infoSection(name));
     if (o.grades || o.gradesDetail) page.appendChild(gradesSection(name, o.from, o.to, !!o.gradesDetail));
+    if (o.attendance) page.appendChild(attendanceSection(name, o.from, o.to, o.notes));
     if (o.calls) page.appendChild(callsSection(name, o.from, o.to, o.notes));
     if (o.support) page.appendChild(supportSection(name, o.from, o.to, o.notes));
     page.appendChild(h("footer", { class: "tp-foot" }, h("span", null, o.notes ? "Confidential — for school use" : "Prepared for the family"), h("span", null, tch ? "Prepared by " + tch : "")));
@@ -199,6 +221,7 @@
     const names = students();
     const overlay = h("div", { class: "pl-overlay", onclick: e => { if (e.target === overlay) overlay.remove(); } });
     const who = h("select", { class: "pl-select", "aria-label": "Student" },
+      opts.allowAll !== false ? h("option", { value: "__summary" }, `Whole class — one summary page (all grades & attendance)`) : null,
       opts.allowAll !== false ? h("option", { value: "__all" }, `All students (${names.length}) — one page each`) : null,
       names.map(n => h("option", { value: n, selected: n === opts.student ? true : null }, n)));
     if (opts.student) who.value = opts.student;
@@ -227,16 +250,18 @@
         h("button", { type: "button", class: "button", onclick: () => {
           const o = { from: from.value || "2000-01-01", to: to.value || today(), notes: notes.checked, title: opts.title };
           checks.forEach(l => { const c = l.querySelector("input"); o[c.dataset.k] = c.checked; });
-          if (!SECTIONS.some(([k]) => o[k])) { msg.textContent = "Choose at least one thing to include."; return; }
+          if (who.value !== "__summary" && !SECTIONS.some(([k]) => o[k])) { msg.textContent = "Choose at least one thing to include."; return; }
           if (o.from > o.to) { msg.textContent = "The first date is after the second."; return; }
-          const list = who.value === "__all" ? names : [who.value];
-          if (!list.length) { msg.textContent = "Add your class list first."; return; }
+          const summaryOnly = who.value === "__summary";
+          const list = who.value === "__all" ? names : summaryOnly ? [] : [who.value];
+          if (!list.length && !summaryOnly) { msg.textContent = "Add your class list first."; return; }
           const pages = [];
-          if (who.value === "__all" && summary.checked) { const p = h("article", { class: "tp-page" }, h("header", { class: "tp-letterhead" }, h("div", null, h("div", { class: "tp-org" }, teacher() || "Class Report"), grade() ? h("div", { class: "tp-org-sub" }, grade()) : null), h("div", { class: "tp-doc" }, h("div", { class: "tp-doc-title" }, "Class Summary"), h("div", null, `${fmtDate(o.from)} – ${fmtDate(o.to)}`))), classSummary(names, o.from, o.to)); pages.push(p); }
+          if (summaryOnly || (who.value === "__all" && summary.checked)) { const p = h("article", { class: "tp-page" }, h("header", { class: "tp-letterhead" }, h("div", null, h("div", { class: "tp-org" }, teacher() || "Class Report"), grade() ? h("div", { class: "tp-org-sub" }, grade()) : null), h("div", { class: "tp-doc" }, h("div", { class: "tp-doc-title" }, "Class Summary"), h("div", null, `${fmtDate(o.from)} – ${fmtDate(o.to)}`))), classSummary(names, o.from, o.to)); pages.push(p); }
           list.forEach(n => pages.push(report(n, o)));
           overlay.remove(); printPages(pages);
         } }, "Print"))));
-    const syncSum = () => sumLine.classList.toggle("hidden", who.value !== "__all");
+    const optsBox = overlay.querySelector(".tp-opts");
+    const syncSum = () => { sumLine.classList.toggle("hidden", who.value !== "__all"); optsBox.classList.toggle("tp-dim", who.value === "__summary"); };
     who.addEventListener("change", syncSum); syncSum();
     document.body.appendChild(overlay);
   }
@@ -246,7 +271,8 @@
     phonelog: { title: "Parent Contact Report", sections: ["calls"] },
     gradebook: { title: "Grade Report", sections: ["grades", "gradesDetail"], summary: true },
     support: { title: "Student Support Report", sections: ["support"] },
-    info: { title: "Student Information", sections: ["info"], notes: false }
+    info: { title: "Student Information", sections: ["info"], notes: false },
+    attendance: { title: "Attendance Report", sections: ["attendance"], summary: true }
   };
   function addPrintButtons() {
     Object.entries(TOOL_PRINT).forEach(([id, o]) => {
@@ -258,5 +284,5 @@
   }
   document.addEventListener("DOMContentLoaded", () => { addPrintButtons(); new MutationObserver(addPrintButtons).observe(document.body, { childList: true, subtree: true }); });
 
-  window.TeacherPrint = { dialog, report, printPages, infoSection, gradesSection, callsSection, supportSection, gradeData, callsData, supportData, infoData, students, absentToday, schoolYearStart, today, fmtDate, pretty, tone };
+  window.TeacherPrint = { attendanceData, attendanceSection, dialog, report, printPages, infoSection, gradesSection, callsSection, supportSection, gradeData, callsData, supportData, infoData, students, absentToday, schoolYearStart, today, fmtDate, pretty, tone };
 })();

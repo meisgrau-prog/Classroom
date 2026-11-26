@@ -11,11 +11,11 @@
     ["info", "Student Info", "StudentInfo", ["studentinfo.js"]],
     ["support", "Student Support", "StudentSupport", ["support.js"]],
     ["pdfjoin", "PDF Tools", "PdfJoiner", ["pdfjoin.js"]],
-    ["timer", "Timer", "TeacherTimer", ["timer.js"]]
+    ["attendance", "Attendance", "Attendance", ["attendance.js"]]
   ];
   const CLASSROOM = [["students", "Students"], ["groups", "Group Maker"], ["number", "Random Number"], ["picker", "Random Student"], ["raffle", "Raffle"], ["prizes", "Prize Boxes"], ["timer", "Timer"]];
   const CLASS_LIST = ["classroom_students_v1"];
-  const RECORDS = ["teacher_phone_log_v1", "teacher_gradebook_v1", "teacher_student_info_v1", "teacher_support_v1", "classroom_raffle_v1", "teacher_prizes_v1"];
+  const RECORDS = ["teacher_attendance_v1", "teacher_phone_log_v1", "teacher_gradebook_v1", "teacher_student_info_v1", "teacher_support_v1", "classroom_raffle_v1", "teacher_prizes_v1"];
 
   const cache = {};
   async function get(path) {
@@ -63,7 +63,7 @@
     function show(k) {
       document.querySelectorAll(".ol-tabs button").forEach(b => b.setAttribute("aria-selected", b.dataset.k === k ? "true" : "false"));
       Object.keys(OPEN).forEach(x => document.getElementById(x).classList.toggle("hidden", x !== k));
-      if (!opened[k] || k === "profile" || k === "info" || k === "support") { OPEN[k](document.getElementById(k)); opened[k] = true; }
+      if (!opened[k] || k === "profile" || k === "info" || k === "support" || k === "attendance") { OPEN[k](document.getElementById(k)); opened[k] = true; }
       try { localStorage.setItem("offline_last_tool", k); } catch (e) {}
     }
     document.querySelectorAll(".ol-tabs button").forEach(b => b.addEventListener("click", () => show(b.dataset.k)));

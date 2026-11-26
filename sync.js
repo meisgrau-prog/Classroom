@@ -20,6 +20,7 @@
     ["teacher_phone_log_v1", "Phone log"],
     ["teacher_student_info_v1", "Student info"],
     ["teacher_support_v1", "Student support"],
+    ["teacher_attendance_v1", "Attendance"],
     ["classroom_raffle_v1", "Raffle"],
     ["teacher_prizes_v1", "Prize boxes"],
     ["teacher_home_v1", "Home page choices"],

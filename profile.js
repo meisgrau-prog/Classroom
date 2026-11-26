@@ -48,7 +48,7 @@
       h("div", { class: "spf-range" }, h("span", null, "From"), fromIn, h("span", null, "to"), toIn,
         h("button", { type: "button", class: "small-btn", onclick: () => { from = P().schoolYearStart(); to = P().today(); draw(); } }, "School year"),
         h("button", { type: "button", class: "small-btn", onclick: () => { from = "2000-01-01"; to = P().today(); draw(); } }, "All")),
-      h("button", { type: "button", class: "button spf-print", onclick: () => P().dialog({ student: current, allowAll: true, from, to, title: "Student Report", sections: ["info", "grades", "calls", "support"] }) }, "🖨 Print transcript")));
+      h("button", { type: "button", class: "button spf-print", onclick: () => P().dialog({ student: current, allowAll: true, from, to, title: "Student Report", sections: ["info", "grades", "attendance", "calls", "support"] }) }, "🖨 Print transcript")));
 
     const name = current;
     const { row, fields } = P().infoData(name);
@@ -77,11 +77,13 @@
       tile("Overall grade", G && G.overall != null ? Math.round(G.overall) + "%" : "—", G ? `${G.cats.reduce((a, x) => a + x.entries.length, 0)} grades entered` : "Gradebook not set up", G && G.overall != null ? "t-" + P().tone(G.overall, G) : "", "gradebook"),
       tile("Parent contacts", String(calls.length), last ? "Last: " + P().fmtDate(last.ts) : "None in these dates", calls.length ? "" : "t-r", "phonelog"),
       tile("Open follow-ups", String(fus.length), fus.length ? fus.map(c => c.followUp.due ? "due " + P().fmtDate(c.followUp.due) : "no date").slice(0, 2).join(", ") : "All caught up", fus.length ? "t-y" : "t-g", "phonelog"),
+      (() => { const A = P().attendanceData(name, from, to); return tile("Attendance", A.pct == null ? "—" : A.pct + "%", A.taken ? `${A.c.A} absent · ${A.c.L} late · ${A.c.E} excused` : "Not taken yet", A.pct == null ? "" : A.pct >= 95 ? "t-g" : A.pct >= 85 ? "t-y" : "t-r", "attendance"); })(),
       tile("Support", String(sup.length), `${sup.filter(e => e.outcome === "worked").length} worked · ${sup.filter(e => e.kind === "plan").length} planned`, "", "support")));
 
     // sections (same as the printout)
     const card = (tool, label, el) => h("div", { class: "card spf-card" }, h("div", { class: "spf-card-tools" }, h("button", { type: "button", class: "small-btn", onclick: () => goTool(tool) }, "Open " + label + " ›")), el);
     root.appendChild(card("gradebook", "Gradebook", P().gradesSection(name, from, to, true)));
+    root.appendChild(card("attendance", "Attendance", P().attendanceSection(name, from, to, true)));
     root.appendChild(card("phonelog", "Phone Log", P().callsSection(name, from, to, true)));
     root.appendChild(card("support", "Student Support", P().supportSection(name, from, to, true)));
     root.appendChild(card("info", "Student Info", P().infoSection(name)));

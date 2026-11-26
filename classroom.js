@@ -313,6 +313,16 @@
     items.map(x => h("li", null, String(x))));
 
   /* ---------- Students ---------- */
+  // Classroom "Here / Absent" also goes into today's attendance (Teacher Tools → Attendance)
+  function markAttendance(name, absent) {
+    try {
+      const K = "teacher_attendance_v1", s = JSON.parse(localStorage.getItem(K) || "null") || { days: {}, notes: {} };
+      const d = new Date(), key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      const day = s.days[key] || (s.days[key] = {});
+      if (absent) day[name] = day[name] === "E" ? "E" : "A"; else if (day[name] === "A" || day[name] === "E" || !day[name]) day[name] = "P";
+      localStorage.setItem(K, JSON.stringify(s));
+    } catch {}
+  }
   function studentsView() {
     const msg = h("p", { class: "status" });
     const input = h("input", { type: "file", accept: ".xlsx,.xlsm,.csv,.txt,.tsv,.xls" });
@@ -423,7 +433,7 @@
       count.textContent = state.names.length ? `${here} here · ${state.names.length - here} absent · ${state.names.length} total` : "No students yet";
       state.names.forEach((n, i) => {
         const away = state.absent.includes(n);
-        const set = a => { state.absent = a ? state.absent.filter(x => x !== n).concat(n) : state.absent.filter(x => x !== n); save(); drawChips(); };
+        const set = a => { state.absent = a ? state.absent.filter(x => x !== n).concat(n) : state.absent.filter(x => x !== n); save(); markAttendance(n, a); drawChips(); };
         chips.appendChild(h("li", { class: "att-row" + (away ? " away" : "") },
           h("span", { class: "att-num" }, String(i + 1)),
           h("span", { class: "stu-av " + (away ? "grey" : "green") }, n.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join("").toUpperCase()),
@@ -445,7 +455,7 @@
         h("p", { class: "help" }, "Mark anyone who's out today. Absent students are left out of groups and picks."),
         chips,
         h("div", { class: "actions" },
-          h("button", { type: "button", class: "button secondary", onclick: () => { state.absent = []; save(); drawChips(); } }, "Mark everyone here"),
+          h("button", { type: "button", class: "button secondary", onclick: () => { state.absent.slice().forEach(n => markAttendance(n, false)); state.absent = []; save(); drawChips(); } }, "Mark everyone here"),
           h("button", { type: "button", class: "small-btn danger", onclick: () => {
             if (state.names.length && confirm("Remove all students from this device?")) { state = { names: [], absent: [] }; save(); refreshAll(); }
           } }, "Clear list")))

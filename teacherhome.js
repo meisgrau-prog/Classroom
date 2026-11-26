@@ -182,7 +182,7 @@
       },
       quick: () => h("div", null, h("h2", { class: "ts-h2" }, "Quick access"), h("section", { class: "ts-cards" },
         [["classroom.html", ICON.class, "Classroom Tools", "Students, groups, random picks, raffle, prize boxes"],
-         ["teacher-tools.html", ICON.phone, "Teacher Tools", "Phone log, gradebook, student info, support, PDF tools & timer"],
+         ["teacher-tools.html", ICON.phone, "Teacher Tools", "Student profile, attendance, phone log, gradebook, student info, support & PDF tools"],
          ["portal.html", ICON.portal, "Parent Portal Settings", "Post classwork, homework, news & banners; who can see it"],
          ["parents.html", ICON.eye, "View Parent Portal", "See the site the way families see it"]].map(([href, ico, t, s]) =>
           h("a", { class: "ts-card", href }, h("span", { class: "ts-card-ico", html: ico }), h("strong", null, t), h("small", null, s)))))
@@ -233,7 +233,7 @@
     const SEC_KEY = "teacher_sections_v1";
     const secRead = () => { try { return JSON.parse(localStorage.getItem(SEC_KEY) || "{}") || {}; } catch { return {}; } };
     const secRows = h("div", { class: "sec-set" });
-    [["classroom", "Classroom Tools", "Students, groups, random picks, raffle, prize boxes"], ["tools", "Teacher Tools", "Phone log, gradebook, student info, support, PDF tools, timer"], ["portal", "Parent Portal Settings", "Classwork, homework, news, programs, banners, access, parents"]].forEach(([id, label, sub]) => {
+    [["classroom", "Classroom Tools", "Students, groups, random picks, raffle, prize boxes"], ["tools", "Teacher Tools", "Student profile, attendance, phone log, gradebook, student info, support, PDF tools"], ["portal", "Parent Portal Settings", "Classwork, homework, news, programs, banners, access, parents"]].forEach(([id, label, sub]) => {
       const cur = secRead()[id] || "bar";
       const seg = h("div", { class: "pl-seg" });
       [["bar", "Tool bar"], ["buttons", "Buttons"], ["list", "List"]].forEach(([v, l]) => seg.appendChild(h("button", { type: "button", class: "pl-seg-btn", "aria-pressed": cur === v ? "true" : "false", "data-sec": id, "data-val": v, onclick: e => {
